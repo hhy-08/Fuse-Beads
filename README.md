@@ -111,6 +111,23 @@ src/
 
 ## 会话总结
 
+### 2026-07-22（PDF 转图片中文空白修复）
+
+- **会话目的**：部分 PDF（如电子发票）转图片后中文内容空白。
+- **完成任务**：
+  - 启用 pdf.js CMap + standard_fonts（同步到 `public/pdfjs`）
+  - 提高渲染倍率，开启注解渲染与白底
+  - 增加 `postinstall` / 构建前同步脚本
+- **关键决策**：发票 PDF 多用 CID/CJK 字体，缺 CMap 时只剩线条、二维码与少量 ASCII；同步启用 `enableXfa` 兼容部分电子票。
+- **修改文件**：`src/utils/FileConverter.ts`、`scripts/SyncPdfjsAssets.mjs`、`package.json`、`.gitignore`、`README.md`
+
+### 2026-07-22（文件转换批量）
+
+- **会话目的**：文件转换支持同格式多文件批量处理。
+- **完成任务**：多选上传、同格式校验、逐个转换进度、多文件结果 ZIP 打包。
+- **关键决策**：不同源格式不允许混选；单文件仍直接下载，多文件统一打包。
+- **修改文件**：`src/utils/FileConverter.ts`、`src/views/fileConverter/index.vue`、`ToolList.ts`、`README.md`
+
 ### 2026-07-22（TXT 转 PDF 中文乱码修复）
 
 - **会话目的**：TXT→PDF 中文乱码。

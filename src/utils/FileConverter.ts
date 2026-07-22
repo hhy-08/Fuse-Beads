@@ -10,8 +10,76 @@ import { jsPDF } from 'jspdf'
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
 import JSZip from 'jszip'
+import { GetBaseRoute } from '@/utils/Env'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
+
+/**
+ * 解析 pdf.js 静态资源根路径（cmaps / standard_fonts）
+ * @returns 以 / 结尾的资源前缀
+ */
+function ResolvePdfjsAssetBase(): string {
+  const base = GetBaseRoute() || '/'
+  const normalized = base.endsWith('/') ? base : `${base}/`
+  return `${normalized}pdfjs/`
+}
+
+/**
+ * 加载 PDF 文档（启用 CMap 与标准字体，修复中文发票等 CID 字体空白）
+ * @param file PDF 文件
+ * @returns PDF 文档代理
+ */
+async function LoadPdfDocument(file: File) {
+  const data = new Uint8Array(await file.arrayBuffer())
+  const assetBase = ResolvePdfjsAssetBase()
+  return pdfjsLib.getDocument({
+    data,
+    cMapUrl: `${assetBase}cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `${assetBase}standard_fonts/`,
+    useSystemFonts: true,
+    enableXfa: true,
+    disableAutoFetch: false,
+    disableStream: false,
+  }).promise
+}
+
+/**
+ * 将 PDF 单页渲染到 Canvas
+ * @param page PDF 页
+ * @param scale 缩放倍率
+ * @param fillWhite 是否铺白底（JPG 必开）
+ * @returns 画布
+ */
+async function RenderPdfPageToCanvas(
+  page: pdfjsLib.PDFPageProxy,
+  scale: number,
+  fillWhite: boolean,
+): Promise<HTMLCanvasElement> {
+  const viewport = page.getViewport({ scale })
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.ceil(viewport.width)
+  canvas.height = Math.ceil(viewport.height)
+  const ctx = canvas.getContext('2d', { alpha: true })
+  if (!ctx) {
+    throw new Error('Canvas 不可用')
+  }
+
+  if (fillWhite) {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  const renderTask = page.render({
+    canvasContext: ctx,
+    canvas,
+    viewport,
+    intent: 'display',
+    annotationMode: pdfjsLib.AnnotationMode.ENABLE,
+  })
+  await renderTask.promise
+  return canvas
+}
 
 /** 支持的源格式 */
 export type FileSourceFormat =
@@ -99,13 +167,107 @@ export function ResolveFileExtension(fileName: string): string {
 export function ResolveSourceFormat(
   extension: string,
 ): FileSourceFormat | null {
-  if (extension === 'jpeg') {
+  const normalized = extension === 'htm' ? 'html' : extension
+  if (normalized === 'jpeg') {
     return null
   }
-  if (extension in FILECONVERMAP) {
-    return extension as FileSourceFormat
+  if (normalized in FILECONVERMAP) {
+    return normalized as FileSourceFormat
   }
   return null
+}
+
+/**
+ * 生成上传项 UID
+ * @returns uid
+ */
+export function CreateFileUid(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+/**
+ * 批量转换同格式文件
+ * 单文件直接返回结果；多文件打包为 ZIP
+ * @param files 文件列表（需同格式）
+ * @param target 目标格式
+ * @param onProgress 总进度 0~100 与当前文件名
+ * @returns 转换结果
+ */
+export async function ConvertFilesBatch(
+  files: File[],
+  target: FileTargetFormat,
+  onProgress?: (progress: number, currentName: string) => void,
+): Promise<FileConvertResult> {
+  if (!files.length) {
+    throw new Error('请先选择文件')
+  }
+
+  const sourceFormats = files.map((file) =>
+    ResolveSourceFormat(ResolveFileExtension(file.name)),
+  )
+  if (sourceFormats.some((item) => !item)) {
+    throw new Error('存在不支持的源格式')
+  }
+  const firstSource = sourceFormats[0]
+  if (sourceFormats.some((item) => item !== firstSource)) {
+    throw new Error('批量转换仅支持相同格式的文件')
+  }
+
+  if (files.length === 1) {
+    return ConvertFile(files[0], target, (progress) => {
+      onProgress?.(progress, files[0].name)
+    })
+  }
+
+  const zip = new JSZip()
+  const nameSet = new Set<string>()
+  let successCount = 0
+  const errors: string[] = []
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]
+    const baseProgress = (index / files.length) * 100
+    const span = 100 / files.length
+
+    try {
+      const result = await ConvertFile(file, target, (progress) => {
+        onProgress?.(
+          Math.min(99, Math.round(baseProgress + (progress / 100) * span)),
+          file.name,
+        )
+      })
+
+      let outputName = result.fileName
+      if (nameSet.has(outputName)) {
+        const base = outputName.replace(/\.[^.]+$/, '')
+        const ext = ResolveFileExtension(outputName) || 'bin'
+        outputName = `${base}_${index + 1}.${ext}`
+      }
+      nameSet.add(outputName)
+      zip.file(outputName, result.blob)
+      successCount += 1
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '转换失败'
+      errors.push(`${file.name}：${message}`)
+    }
+  }
+
+  if (!successCount) {
+    throw new Error(errors[0] || '全部转换失败')
+  }
+
+  onProgress?.(100, '')
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const tipParts = [`成功 ${successCount}/${files.length} 个`]
+  if (errors.length) {
+    tipParts.push(`失败 ${errors.length} 个`)
+  }
+
+  return {
+    blob: zipBlob,
+    fileName: `converted_${firstSource}_to_${target}.zip`,
+    tip: tipParts.join('，'),
+  }
 }
 
 /**
@@ -203,31 +365,19 @@ export async function ConvertPdfToImages(
   imageFormat: 'png' | 'jpg',
   onProgress?: (progress: number) => void,
 ): Promise<FileConvertResult> {
-  const data = new Uint8Array(await file.arrayBuffer())
-  const pdf = await pdfjsLib.getDocument({ data }).promise
+  const pdf = await LoadPdfDocument(file)
   const pageCount = pdf.numPages
   const mimeType = imageFormat === 'png' ? 'image/png' : 'image/jpeg'
   const quality = imageFormat === 'jpg' ? 0.92 : undefined
-  const scale = 2
+  const scale = 2.5
+  const fillWhite = true
   const baseName = file.name.replace(/\.[^.]+$/, '') || 'page'
 
   if (pageCount === 1) {
-    onProgress?.(30)
+    onProgress?.(20)
     const page = await pdf.getPage(1)
-    const viewport = page.getViewport({ scale })
-    const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      throw new Error('Canvas 不可用')
-    }
-    if (imageFormat === 'jpg') {
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    }
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise
-    onProgress?.(90)
+    const canvas = await RenderPdfPageToCanvas(page, scale, fillWhite)
+    onProgress?.(85)
     const blob = await CanvasToBlob(canvas, mimeType, quality)
     onProgress?.(100)
     return {
@@ -240,19 +390,7 @@ export async function ConvertPdfToImages(
   const zip = new JSZip()
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber)
-    const viewport = page.getViewport({ scale })
-    const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      throw new Error('Canvas 不可用')
-    }
-    if (imageFormat === 'jpg') {
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    }
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise
+    const canvas = await RenderPdfPageToCanvas(page, scale, fillWhite)
     const blob = await CanvasToBlob(canvas, mimeType, quality)
     const pageName = `${baseName}_p${String(pageNumber).padStart(2, '0')}.${
       imageFormat === 'jpg' ? 'jpg' : 'png'
@@ -279,16 +417,17 @@ export async function ConvertPdfToTxt(
   file: File,
   onProgress?: (progress: number) => void,
 ): Promise<FileConvertResult> {
-  const data = new Uint8Array(await file.arrayBuffer())
-  const pdf = await pdfjsLib.getDocument({ data }).promise
+  const pdf = await LoadPdfDocument(file)
   const parts: string[] = []
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber)
-    const content = await page.getTextContent()
+    const content = await page.getTextContent({
+      includeMarkedContent: true,
+    })
     const text = content.items
       .map((item) => ('str' in item ? item.str : ''))
-      .join(' ')
+      .join('')
     parts.push(`----- 第 ${pageNumber} 页 -----\n${text}`)
     onProgress?.(Math.round((pageNumber / pdf.numPages) * 100))
   }
@@ -685,5 +824,5 @@ export async function ConvertFile(
  * @returns 说明
  */
 export function ResolveSupportedHint(): string {
-  return '纯前端转换：PDF→PNG/JPG/TXT，TXT→PDF，DOCX→TXT/HTML，XLSX→CSV/JSON，CSV↔JSON，JSON→TXT，HTML→TXT（不含 Word/Excel↔PDF）'
+  return '支持同格式多文件批量转换。PDF→PNG/JPG/TXT，TXT→PDF，DOCX→TXT/HTML，XLSX→CSV/JSON，CSV↔JSON，JSON→TXT，HTML→TXT（不含 Word/Excel↔PDF）'
 }

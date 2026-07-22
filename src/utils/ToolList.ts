@@ -62,7 +62,7 @@ export function GetToolList(): ToolItem[] {
     {
       id: 'file',
       name: '文件转换',
-      description: '纯前端转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
+      description: '同格式多文件批量转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
       path: '/file-converter',
       available: true,
       badge: '可用',

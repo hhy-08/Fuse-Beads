@@ -7,11 +7,13 @@
     "dev": "vite --mode dev",
     "test": "vite --mode test",
     "prod": "vite --mode prod",
-    "build": "vue-tsc -b && vite build --mode prod",
-    "build-dev": "vue-tsc -b && vite build --mode dev",
-    "build-test": "vue-tsc -b && vite build --mode test",
-    "build-prod": "vue-tsc -b && vite build --mode prod",
-    "preview": "vite preview"
+    "build": "node scripts/SyncPdfjsAssets.mjs && vue-tsc -b && vite build --mode prod",
+    "build-dev": "node scripts/SyncPdfjsAssets.mjs && vue-tsc -b && vite build --mode dev",
+    "build-test": "node scripts/SyncPdfjsAssets.mjs && vue-tsc -b && vite build --mode test",
+    "build-prod": "node scripts/SyncPdfjsAssets.mjs && vue-tsc -b && vite build --mode prod",
+    "preview": "vite preview",
+    "postinstall": "node scripts/SyncPdfjsAssets.mjs",
+    "sync-pdfjs": "node scripts/SyncPdfjsAssets.mjs"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",

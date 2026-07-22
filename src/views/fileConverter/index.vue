@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <p class="brand">{{ appBrand }}</p>
         <h1>文件转换</h1>
-        <p class="subtitle">纯前端本地转换，含 PDF 转 PNG/JPG，不上传服务器</p>
+        <p class="subtitle">纯前端本地转换，支持同格式多文件批量处理</p>
       </div>
       <nav class="hero-nav">
         <router-link to="/">工具列表</router-link>
@@ -26,22 +26,50 @@
             ref="fileInput"
             type="file"
             accept=".pdf,.txt,.docx,.xlsx,.csv,.json,.html,.htm"
+            multiple
             hidden
             @change="HandleFileSelect"
           />
-          <span class="upload-title">点击或拖拽文件到此处</span>
+          <span class="upload-title">
+            {{ fileList.length ? '继续添加同格式文件' : '点击或拖拽文件到此处' }}
+          </span>
           <span class="upload-tip">{{ supportedHint }}</span>
         </label>
       </section>
 
-      <section v-if="selectedFile" class="options-card">
-        <div class="file-meta">
-          <p class="file-name">{{ selectedFile.name }}</p>
-          <p class="file-size">{{ FormatSize(selectedFile.size) }}</p>
-          <button type="button" class="ghost" :disabled="isConverting" @click="ClearFile">
-            移除文件
+      <section v-if="fileList.length" class="options-card">
+        <div class="list-head">
+          <p class="list-title">
+            已选 {{ fileList.length }} 个
+            <span v-if="sourceFormatLabel">（{{ sourceFormatLabel }}）</span>
+          </p>
+          <button type="button" class="ghost" :disabled="isConverting" @click="ClearFiles">
+            清空列表
           </button>
         </div>
+
+        <ul class="file-list">
+          <li v-for="item in fileList" :key="item.uid">
+            <div class="file-info">
+              <p class="file-name">{{ item.file.name }}</p>
+              <p class="file-size">
+                {{ FormatSize(item.file.size) }}
+                <span class="status-tag" :class="item.status">
+                  {{ ResolveItemStatus(item.status) }}
+                </span>
+              </p>
+              <p v-if="item.error" class="item-error">{{ item.error }}</p>
+            </div>
+            <button
+              type="button"
+              class="remove-btn"
+              :disabled="isConverting"
+              @click="RemoveFile(item.uid)"
+            >
+              ×
+            </button>
+          </li>
+        </ul>
 
         <div class="convert-row">
           <label class="field">
@@ -68,13 +96,16 @@
             :disabled="isConverting || !targetFormat"
             @click="HandleConvert"
           >
-            {{ isConverting ? `转换中 ${progress}%` : '开始转换' }}
+            {{ convertButtonLabel }}
           </button>
         </div>
 
         <div v-if="isConverting || progress > 0" class="progress-track">
           <div class="progress-bar" :style="{ width: `${progress}%` }" />
         </div>
+        <p v-if="currentFileName && isConverting" class="current-file">
+          正在处理：{{ currentFileName }}
+        </p>
 
         <p v-if="statusText" class="status">{{ statusText }}</p>
 
@@ -83,7 +114,7 @@
           <p class="result-name">{{ resultName }}</p>
           <p v-if="resultTip" class="result-tip">{{ resultTip }}</p>
           <button type="button" class="success" @click="HandleDownload">
-            下载文件
+            {{ fileList.length > 1 ? '下载 ZIP 包' : '下载文件' }}
           </button>
         </div>
       </section>
@@ -91,14 +122,15 @@
       <section class="tips-card">
         <h2>支持的转换</h2>
         <ul>
-          <li>PDF → PNG / JPG（多页自动打包 ZIP）/ TXT</li>
+          <li>同格式多文件批量转换，结果自动打包 ZIP</li>
+          <li>PDF → PNG / JPG（多页自动 ZIP）/ TXT</li>
           <li>TXT → PDF</li>
           <li>DOCX → TXT / HTML</li>
           <li>XLSX → CSV / JSON</li>
           <li>CSV ↔ JSON，JSON → TXT，HTML → TXT</li>
         </ul>
         <p class="warn">
-          不支持 Word/Excel ↔ PDF 等需后端处理的类型，避免假转换。
+          一次只能处理同一源格式；不支持 Word/Excel ↔ PDF 等需后端类型。
         </p>
       </section>
     </main>
@@ -108,13 +140,14 @@
 <script lang="ts">
 /**
  * 文件转换工具页
- * 纯前端转换：PDF 渲染、文档/表格解析，无后端依赖
+ * 纯前端转换，支持同格式多文件批量处理
  */
 import { defineComponent } from 'vue'
 import { APPBRAND } from '@/utils/Brand'
 import { FormatFileSize } from '@/utils/ImageCompress'
 import {
-  ConvertFile,
+  ConvertFilesBatch,
+  CreateFileUid,
   ResolveAvailableTargets,
   ResolveFileExtension,
   ResolveSourceFormat,
@@ -122,8 +155,20 @@ import {
   TriggerFileDownload,
   ValidateConvertFile,
   type FileFormatOption,
+  type FileSourceFormat,
   type FileTargetFormat,
 } from '@/utils/FileConverter'
+
+/** 列表文件状态 */
+type BatchItemStatus = 'pending' | 'processing' | 'done' | 'error'
+
+/** 批量文件项 */
+type BatchFileItem = {
+  uid: string
+  file: File
+  status: BatchItemStatus
+  error: string
+}
 
 export default defineComponent({
   name: 'FileConverterView',
@@ -134,14 +179,41 @@ export default defineComponent({
       isDragging: false,
       isConverting: false,
       progress: 0,
+      currentFileName: '',
       statusText: '',
-      selectedFile: null as File | null,
+      fileList: [] as BatchFileItem[],
+      sourceFormat: null as FileSourceFormat | null,
       targetFormat: '' as FileTargetFormat | '',
       availableTargets: [] as FileFormatOption[],
       resultBlob: null as Blob | null,
       resultName: '',
       resultTip: '',
     }
+  },
+  computed: {
+    /**
+     * 源格式展示名
+     * @returns 文案
+     */
+    sourceFormatLabel(): string {
+      if (!this.sourceFormat) {
+        return ''
+      }
+      return this.sourceFormat.toUpperCase()
+    },
+    /**
+     * 转换按钮文案
+     * @returns 文案
+     */
+    convertButtonLabel(): string {
+      if (this.isConverting) {
+        return `转换中 ${this.progress}%`
+      }
+      if (this.fileList.length > 1) {
+        return `批量转换（${this.fileList.length}）`
+      }
+      return '开始转换'
+    },
   },
   /**
    * 挂载时同步页面标题
@@ -159,31 +231,88 @@ export default defineComponent({
       return FormatFileSize(bytes)
     },
     /**
-     * 设置选中文件并刷新可选目标
-     * @param file 文件
+     * 状态文案
+     * @param status 状态
+     * @returns 文案
      */
-    SetSelectedFile(file: File) {
-      const error = ValidateConvertFile(file)
-      if (error) {
-        this.statusText = error
+    ResolveItemStatus(status: BatchItemStatus): string {
+      const map: Record<BatchItemStatus, string> = {
+        pending: '待转换',
+        processing: '转换中',
+        done: '完成',
+        error: '失败',
+      }
+      return map[status]
+    },
+    /**
+     * 追加文件（强制同格式）
+     * @param files 文件列表
+     */
+    AppendFiles(files: File[]) {
+      if (!files.length) {
         return
       }
 
-      const extension = ResolveFileExtension(file.name)
-      const source = ResolveSourceFormat(extension)
-      if (!source) {
-        this.statusText = '不支持的源格式'
-        return
+      const accepted: File[] = []
+      const rejected: string[] = []
+
+      files.forEach((file) => {
+        const error = ValidateConvertFile(file)
+        if (error) {
+          rejected.push(`${file.name}（${error}）`)
+          return
+        }
+
+        const source = ResolveSourceFormat(ResolveFileExtension(file.name))
+        if (!source) {
+          rejected.push(`${file.name}（不支持的格式）`)
+          return
+        }
+
+        if (this.sourceFormat && source !== this.sourceFormat) {
+          rejected.push(
+            `${file.name}（需与已选格式 ${this.sourceFormat.toUpperCase()} 一致）`,
+          )
+          return
+        }
+
+        const duplicated = this.fileList.some(
+          (item) =>
+            item.file.name === file.name && item.file.size === file.size,
+        )
+        if (duplicated) {
+          rejected.push(`${file.name}（已在列表中）`)
+          return
+        }
+
+        if (!this.sourceFormat) {
+          this.sourceFormat = source
+          this.availableTargets = ResolveAvailableTargets(source)
+          this.targetFormat = this.availableTargets[0]?.value || ''
+        }
+
+        accepted.push(file)
+      })
+
+      if (accepted.length) {
+        const next = accepted.map((file) => ({
+          uid: CreateFileUid(),
+          file,
+          status: 'pending' as const,
+          error: '',
+        }))
+        this.fileList = [...this.fileList, ...next]
+        this.resultBlob = null
+        this.resultName = ''
+        this.resultTip = ''
+        this.progress = 0
       }
 
-      this.selectedFile = file
-      this.availableTargets = ResolveAvailableTargets(source)
-      this.targetFormat = this.availableTargets[0]?.value || ''
-      this.resultBlob = null
-      this.resultName = ''
-      this.resultTip = ''
-      this.progress = 0
-      this.statusText = ''
+      if (rejected.length) {
+        this.statusText = `部分文件未加入：${rejected.join('；')}`
+      } else if (accepted.length) {
+        this.statusText = ''
+      }
     },
     /**
      * 选择文件
@@ -191,10 +320,7 @@ export default defineComponent({
      */
     HandleFileSelect(event: Event) {
       const target = event.target as HTMLInputElement
-      const file = target.files?.[0]
-      if (file) {
-        this.SetSelectedFile(file)
-      }
+      this.AppendFiles(Array.from(target.files || []))
       target.value = ''
     },
     /**
@@ -227,10 +353,7 @@ export default defineComponent({
      */
     HandleDrop(event: DragEvent) {
       this.isDragging = false
-      const file = event.dataTransfer?.files?.[0]
-      if (file) {
-        this.SetSelectedFile(file)
-      }
+      this.AppendFiles(Array.from(event.dataTransfer?.files || []))
     },
     /**
      * 切换目标格式
@@ -242,51 +365,99 @@ export default defineComponent({
       this.resultBlob = null
       this.resultName = ''
       this.resultTip = ''
+      this.fileList = this.fileList.map((item) => ({
+        ...item,
+        status: 'pending',
+        error: '',
+      }))
     },
     /**
-     * 清空当前文件
+     * 移除单个文件
+     * @param uid 文件 uid
      */
-    ClearFile() {
-      this.selectedFile = null
+    RemoveFile(uid: string) {
+      this.fileList = this.fileList.filter((item) => item.uid !== uid)
+      if (!this.fileList.length) {
+        this.ClearFiles()
+      }
+    },
+    /**
+     * 清空列表
+     */
+    ClearFiles() {
+      this.fileList = []
+      this.sourceFormat = null
       this.targetFormat = ''
       this.availableTargets = []
       this.resultBlob = null
       this.resultName = ''
       this.resultTip = ''
       this.progress = 0
+      this.currentFileName = ''
       this.statusText = ''
     },
     /**
-     * 执行转换
+     * 执行批量转换
      */
     async HandleConvert() {
-      if (!this.selectedFile || !this.targetFormat || this.isConverting) {
+      if (!this.fileList.length || !this.targetFormat || this.isConverting) {
         return
       }
 
       this.isConverting = true
       this.progress = 0
+      this.currentFileName = ''
       this.statusText = '正在转换…'
       this.resultBlob = null
+      this.fileList = this.fileList.map((item) => ({
+        ...item,
+        status: 'pending',
+        error: '',
+      }))
 
       try {
-        const result = await ConvertFile(
-          this.selectedFile,
+        const files = this.fileList.map((item) => item.file)
+        const result = await ConvertFilesBatch(
+          files,
           this.targetFormat,
-          (value) => {
-            this.progress = value
+          (progress, currentName) => {
+            this.progress = progress
+            this.currentFileName = currentName
+            if (currentName) {
+              this.fileList = this.fileList.map((item) => {
+                if (item.file.name === currentName) {
+                  return { ...item, status: 'processing', error: '' }
+                }
+                if (item.status === 'processing') {
+                  return { ...item, status: 'done' }
+                }
+                return item
+              })
+            }
           },
         )
+
+        this.fileList = this.fileList.map((item) => ({
+          ...item,
+          status: item.status === 'error' ? 'error' : 'done',
+        }))
         this.resultBlob = result.blob
         this.resultName = result.fileName
         this.resultTip = result.tip || ''
         this.progress = 100
+        this.currentFileName = ''
         this.statusText = '转换成功，可下载'
       } catch (error) {
         console.error(error)
         this.statusText =
           error instanceof Error ? error.message : '转换失败，请重试'
         this.progress = 0
+        this.currentFileName = ''
+        this.fileList = this.fileList.map((item) =>
+          item.status === 'processing'
+            ? { ...item, status: 'error', error: this.statusText }
+            : item,
+        )
       } finally {
         this.isConverting = false
       }
@@ -426,24 +597,111 @@ export default defineComponent({
   border: 1px solid rgba(49, 65, 95, 0.1);
 }
 
-.file-meta {
+.list-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.list-title {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2a3d;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.file-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(49, 65, 95, 0.1);
+  background: #fff;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .file-name {
   margin: 0;
   font-weight: 600;
   color: #1f2a3d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-size {
-  margin: 0;
+  margin: 4px 0 0;
   color: #6a7a94;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+}
+
+.status-tag.pending {
+  background: rgba(49, 65, 95, 0.08);
+  color: #5a6a84;
+}
+
+.status-tag.processing {
+  background: rgba(176, 132, 46, 0.14);
+  color: #8a6418;
+}
+
+.status-tag.done {
+  background: rgba(46, 125, 90, 0.12);
+  color: #1f6b4a;
+}
+
+.status-tag.error {
+  background: rgba(176, 61, 61, 0.12);
+  color: #9f2f2f;
+}
+
+.item-error {
+  margin: 4px 0 0;
+  color: #9f2f2f;
+  font-size: 0.8rem;
+}
+
+.remove-btn {
+  border: none;
+  background: transparent;
+  color: #9f2f2f;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .convert-row {
@@ -517,8 +775,9 @@ export default defineComponent({
   transition: width 0.2s ease;
 }
 
+.current-file,
 .status {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   color: #4a5a76;
   font-size: 0.9rem;
 }
