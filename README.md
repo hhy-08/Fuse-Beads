@@ -1,9 +1,10 @@
 # Fuse Beads · 拼豆豆图纸生成器
 
-基于 **Vue 3 + Vite** 的拼豆像素图纸工具。页面组件使用 **Options API**（Vue2 风格生命周期）实现。
+基于 **Vue 3 + Vite** 的拼豆与实用小工具集合。页面组件使用 **Options API**（Vue2 风格生命周期）实现。
 
 ## 功能
 
+- 工具列表首页：拼豆工具、图片压缩工具等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -47,7 +48,9 @@ npm run dev
 
 | 路径 | 说明 |
 |------|------|
-| `/` | 图纸生成器 |
+| `/` | 工具列表（默认首页） |
+| `/generator` | 拼豆图纸生成器 |
+| `/image-compress` | 图片压缩工具 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -63,20 +66,26 @@ src/
   router/
     index.ts              # 路由实例与前置守卫
     routes.ts             # 自动聚合各业务路由
+    tools/index.ts
     generator/index.ts
+    imageCompress/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
     state.ts / getters.ts / mutations.ts / actions.ts
     modules/generator.ts  # 图纸参数状态
   views/
-    generator/index.vue   # 生成器页
+    tools/index.vue       # 工具列表首页
+    generator/index.vue   # 拼豆生成器页
+    imageCompress/index.vue # 图片压缩页
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
     BeadCanvas.vue
   utils/
     Env.ts                # 环境变量读取
+    ToolList.ts           # 首页工具列表配置
+    ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
     TextToPixels.ts
     DrawBeadPattern.ts
     MardColors.ts          # MARD 291 色卡
@@ -85,6 +94,38 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（图片压缩对齐 toolbox）
+
+- **会话目的**：参考 `tool/frontend` 的 image-compressor 重做本项目图片压缩页。
+- **完成任务**：
+  - 接入 `browser-image-compression` / `jszip` / `gifuct-js`
+  - 支持多图拖拽上传、质量/缩放/最大宽高、进度条、结果表、单下/打包 ZIP
+  - GIF 单独处理，其它格式走 browser-image-compression
+  - 压缩逻辑抽到 `src/utils/ImageCompress.ts`，页面保持 Options API + 原生 UI
+- **关键决策**：
+  - 不引入 Element Plus，交互能力对齐参考页，视觉延续 Fuse Beads 风格
+  - 文件大小限制：GIF ≤ 20MB，其它 ≤ 50MB
+- **修改文件**：
+  - 新增 `src/utils/ImageCompress.ts`
+  - 重写 `src/views/imageCompress/index.vue`
+  - 更新 `package.json`、`src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-22（工具列表首页）
+
+- **会话目的**：创建工具列表页作为默认首页，点击进入各工具。
+- **完成任务**：
+  - 新增工具列表页 `/`，含拼豆工具、图片压缩工具、色卡对照（即将推出）
+  - 拼豆工具路由改为 `/generator`
+  - 新增图片压缩工具页 `/image-compress`（本地 Canvas 压缩）
+  - 更新生成器/关于页导航回链
+- **关键决策**：
+  - 路由按目录自动聚合，工具配置集中在 `ToolList.ts`
+  - 未就绪工具以禁用卡片展示，避免空跳转
+- **修改文件**：
+  - 新增 `src/views/tools/index.vue`、`src/views/imageCompress/index.vue`
+  - 新增 `src/router/tools/index.ts`、`src/router/imageCompress/index.ts`、`src/utils/ToolList.ts`
+  - 更新 `src/router/generator/index.ts`、`src/views/generator/index.vue`、`src/views/about/index.vue`、`README.md`
 
 ### 2026-07-22（图片清晰度 / 相近色合并）
 

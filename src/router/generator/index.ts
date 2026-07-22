@@ -7,14 +7,10 @@ const Generator = () => import('@/views/generator/index.vue')
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
+    path: '/generator',
     name: 'Generator',
     component: Generator,
-    meta: { title: '图纸生成' },
-  },
-  {
-    path: '/generator',
-    redirect: '/',
+    meta: { title: '拼豆工具' },
   },
 ]
 

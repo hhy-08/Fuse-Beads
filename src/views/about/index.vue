@@ -4,7 +4,8 @@
       <p class="brand">Fuse Beads</p>
       <h1>关于本项目</h1>
       <nav class="nav">
-        <router-link to="/">返回生成器</router-link>
+        <router-link to="/">工具列表</router-link>
+        <router-link to="/generator">拼豆工具</router-link>
       </nav>
     </header>
 
@@ -62,6 +63,12 @@ export default defineComponent({
 .about-hero h1 {
   margin: 8px 0 16px;
   font-size: 1.5rem;
+}
+
+.nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .nav a {

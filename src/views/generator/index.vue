@@ -7,7 +7,7 @@
         <p class="subtitle">文字或图片一键生成可打印的拼豆像素图纸</p>
       </div>
       <nav class="hero-nav">
-        <router-link to="/">生成器</router-link>
+        <router-link to="/">工具列表</router-link>
         <router-link to="/about">关于</router-link>
       </nav>
     </header>
