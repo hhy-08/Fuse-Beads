@@ -8,11 +8,48 @@
           {{ outlineCount }} · 合计 {{ beadCount }}
         </p>
       </div>
-      <span class="hint">参数变化后自动重绘</span>
+
+      <div class="zoom-bar">
+        <button type="button" class="zoom-btn" title="缩小" @click="ZoomOut">
+          −
+        </button>
+        <input
+          class="zoom-range"
+          type="range"
+          min="50"
+          max="300"
+          step="10"
+          :value="Math.round(previewZoom * 100)"
+          @input="HandleZoomInput"
+        />
+        <span class="zoom-value">{{ Math.round(previewZoom * 100) }}%</span>
+        <button type="button" class="zoom-btn" title="放大" @click="ZoomIn">
+          +
+        </button>
+        <button type="button" class="zoom-reset" @click="ResetZoom">重置</button>
+      </div>
     </div>
 
-    <div class="canvas-stage" ref="stage">
-      <canvas ref="canvas"></canvas>
+    <div
+      class="canvas-stage"
+      ref="stage"
+      @wheel="HandleWheelZoom"
+    >
+      <div
+        class="canvas-frame"
+        :style="{
+          width: `${displayWidth}px`,
+          height: `${displayHeight}px`,
+        }"
+      >
+        <canvas
+          ref="canvas"
+          :style="{
+            width: `${displayWidth}px`,
+            height: `${displayHeight}px`,
+          }"
+        ></canvas>
+      </div>
     </div>
   </section>
 </template>
@@ -20,7 +57,7 @@
 <script lang="ts">
 /**
  * 拼豆 Canvas 预览组件
- * 支持字间距与逐字颜色/字号采样绘制
+ * 支持字间距、逐字样式，以及预览缩放
  */
 import { defineComponent, type PropType } from 'vue'
 import {
@@ -33,6 +70,10 @@ import {
 } from '../utils/TextToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
 import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
+
+const MINZOOM = 0.5
+const MAXZOOM = 3
+const DEFAULTZOOM = 1
 
 export default defineComponent({
   name: 'BeadCanvas',
@@ -49,6 +90,7 @@ export default defineComponent({
     strokeColor: { type: String, required: true },
     strokeWidth: { type: Number, required: true },
     showGrid: { type: Boolean, required: true },
+    showColorCode: { type: Boolean, required: true },
   },
   data() {
     return {
@@ -60,7 +102,26 @@ export default defineComponent({
       patternGrid: { width: 0, height: 0, cells: [] } as BeadPatternGrid,
       redrawTimer: null as ReturnType<typeof setTimeout> | null,
       renderToken: 0,
+      previewZoom: DEFAULTZOOM,
+      naturalWidth: 320,
+      naturalHeight: 200,
     }
+  },
+  computed: {
+    /**
+     * 缩放后的显示宽度
+     * @returns 像素宽度
+     */
+    displayWidth(): number {
+      return Math.max(1, Math.round(this.naturalWidth * this.previewZoom))
+    },
+    /**
+     * 缩放后的显示高度
+     * @returns 像素高度
+     */
+    displayHeight(): number {
+      return Math.max(1, Math.round(this.naturalHeight * this.previewZoom))
+    },
   },
   /**
    * 组件挂载后执行首次绘制，并监听窗口尺寸变化
@@ -116,6 +177,9 @@ export default defineComponent({
     showGrid() {
       this.ScheduleRender()
     },
+    showColorCode() {
+      this.ScheduleRender()
+    },
   },
   methods: {
     /**
@@ -141,6 +205,52 @@ export default defineComponent({
      */
     HandleWindowResize() {
       this.ScheduleRender()
+    },
+    /**
+     * 限制缩放比例到合法区间
+     * @param value 原始缩放
+     * @returns 合法缩放
+     */
+    ClampZoom(value: number): number {
+      return Math.min(MAXZOOM, Math.max(MINZOOM, Number(value.toFixed(2))))
+    },
+    /**
+     * 放大预览
+     */
+    ZoomIn() {
+      this.previewZoom = this.ClampZoom(this.previewZoom + 0.1)
+    },
+    /**
+     * 缩小预览
+     */
+    ZoomOut() {
+      this.previewZoom = this.ClampZoom(this.previewZoom - 0.1)
+    },
+    /**
+     * 重置预览缩放
+     */
+    ResetZoom() {
+      this.previewZoom = DEFAULTZOOM
+    },
+    /**
+     * 滑杆调整缩放
+     * @param event 输入事件
+     */
+    HandleZoomInput(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.previewZoom = this.ClampZoom(Number(target.value) / 100)
+    },
+    /**
+     * Ctrl/⌘ + 滚轮缩放预览
+     * @param event 滚轮事件
+     */
+    HandleWheelZoom(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) {
+        return
+      }
+      event.preventDefault()
+      const delta = event.deltaY > 0 ? -0.1 : 0.1
+      this.previewZoom = this.ClampZoom(this.previewZoom + delta)
     },
     /**
      * 计算当前文字所需的最大采样字号
@@ -204,11 +314,14 @@ export default defineComponent({
         beadSize: this.beadSize,
         backgroundColor: this.backgroundColor,
         showGrid: this.showGrid,
-        showColorCode: true,
+        showColorCode: this.showColorCode,
       })
+
+      this.naturalWidth = canvas.width
+      this.naturalHeight = canvas.height
     },
     /**
-     * 导出当前 Canvas 为 PNG 图纸文件
+     * 导出当前 Canvas 为 PNG 图纸文件（按实际格子分辨率导出）
      */
     ExportImage() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
@@ -236,6 +349,7 @@ export default defineComponent({
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .preview-header h2 {
@@ -250,15 +364,59 @@ export default defineComponent({
   font-size: 0.9rem;
 }
 
-.hint {
-  color: #8a95a8;
+.zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(40, 56, 84, 0.1);
+}
+
+.zoom-btn,
+.zoom-reset {
+  height: 32px;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: #fff;
+  color: #31415f;
+  cursor: pointer;
+}
+
+.zoom-btn {
+  width: 32px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.zoom-reset {
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.zoom-btn:hover,
+.zoom-reset:hover {
+  border-color: #3f6fe8;
+  color: #3f6fe8;
+}
+
+.zoom-range {
+  width: 120px;
+  accent-color: #3f6fe8;
+}
+
+.zoom-value {
+  min-width: 44px;
+  text-align: center;
   font-size: 0.82rem;
-  white-space: nowrap;
+  color: #4b5872;
+  font-variant-numeric: tabular-nums;
 }
 
 .canvas-stage {
   flex: 1;
-  min-height: 420px;
+  min-height: 480px;
   overflow: auto;
   border-radius: 22px;
   background:
@@ -271,17 +429,20 @@ export default defineComponent({
   border: 1px solid rgba(40, 56, 84, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
   padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   animation: fadePanel 0.5s ease both;
 }
 
+.canvas-frame {
+  margin: 0 auto;
+  min-width: min-content;
+}
+
 .canvas-stage canvas {
-  max-width: 100%;
-  height: auto;
+  display: block;
   border-radius: 8px;
   box-shadow: 0 16px 36px rgba(28, 42, 68, 0.12);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 @keyframes fadePanel {
@@ -297,11 +458,11 @@ export default defineComponent({
 
 @media (max-width: 900px) {
   .canvas-stage {
-    min-height: 320px;
+    min-height: 360px;
   }
 
-  .hint {
-    display: none;
+  .zoom-range {
+    width: 88px;
   }
 }
 </style>

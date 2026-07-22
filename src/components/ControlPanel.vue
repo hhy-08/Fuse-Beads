@@ -215,11 +215,11 @@
     <section class="section">
       <h2>珠子外观</h2>
       <label class="field">
-        <span>格子尺寸 {{ beadSize }}px</span>
+        <span>格子尺寸 {{ beadSize }}px（越大色值越清晰）</span>
         <input
           type="range"
-          min="12"
-          max="36"
+          min="28"
+          max="72"
           :value="beadSize"
           @input="EmitBeadSize"
         />
@@ -237,6 +237,15 @@
       <label class="toggle">
         <input type="checkbox" :checked="showGrid" @change="EmitShowGrid" />
         <span>显示辅助网格</span>
+      </label>
+
+      <label class="toggle">
+        <input
+          type="checkbox"
+          :checked="showColorCode"
+          @change="EmitShowColorCode"
+        />
+        <span>豆豆上显示色值</span>
       </label>
     </section>
 
@@ -336,6 +345,7 @@ export default defineComponent({
     strokeColor: { type: String, required: true },
     strokeWidth: { type: Number, required: true },
     showGrid: { type: Boolean, required: true },
+    showColorCode: { type: Boolean, required: true },
   },
   emits: [
     'UpdateText',
@@ -353,6 +363,7 @@ export default defineComponent({
     'UpdateStrokeColor',
     'UpdateStrokeWidth',
     'UpdateShowGrid',
+    'UpdateShowColorCode',
     'ExportImage',
   ],
   data() {
@@ -718,6 +729,14 @@ export default defineComponent({
     EmitShowGrid(event: Event) {
       const target = event.target as HTMLInputElement
       this.$emit('UpdateShowGrid', target.checked)
+    },
+    /**
+     * 派发色值显示开关变更事件
+     * @param event 变更事件
+     */
+    EmitShowColorCode(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateShowColorCode', target.checked)
     },
     /**
      * 派发导出图纸事件

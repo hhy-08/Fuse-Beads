@@ -23,6 +23,7 @@ export type GeneratorState = {
   strokeColor: string
   strokeWidth: number
   showGrid: boolean
+  showColorCode: boolean
 }
 
 const DEFAULTCOLOR = '#0F54C0'
@@ -41,13 +42,14 @@ const generator = {
       { ...DEFAULTCHARSTYLE },
     ],
     threshold: 200,
-    beadSize: 22,
+    beadSize: 40,
     beadColor: DEFAULTCOLOR,
     backgroundColor: '#f7f4ef',
     showStroke: true,
     strokeColor: '#000000',
     strokeWidth: 1,
     showGrid: true,
+    showColorCode: true,
   } as GeneratorState,
   getters: {
     /**
@@ -128,6 +130,12 @@ const generator = {
      * @returns 是否显示网格
      */
     showGrid: (state: GeneratorState) => state.showGrid,
+    /**
+     * 获取色值显示开关
+     * @param state 模块状态
+     * @returns 是否显示色值
+     */
+    showColorCode: (state: GeneratorState) => state.showColorCode,
   },
   mutations: {
     /**
@@ -257,7 +265,7 @@ const generator = {
      * @param value 尺寸
      */
     SETBEADSIZE(state: GeneratorState, value: number) {
-      state.beadSize = value
+      state.beadSize = Math.min(72, Math.max(28, Math.round(value)))
     },
     /**
      * 设置默认珠子颜色
@@ -307,6 +315,14 @@ const generator = {
     SETSHOWGRID(state: GeneratorState, value: boolean) {
       state.showGrid = value
     },
+    /**
+     * 设置色值显示开关
+     * @param state 模块状态
+     * @param value 是否显示色值
+     */
+    SETSHOWCOLORCODE(state: GeneratorState, value: boolean) {
+      state.showColorCode = value
+    },
   },
   actions: {
     /**
@@ -327,13 +343,14 @@ const generator = {
         { ...DEFAULTCHARSTYLE },
       ])
       commit('SETTHRESHOLD', 200)
-      commit('SETBEADSIZE', 22)
+      commit('SETBEADSIZE', 40)
       commit('SETBEADCOLOR', DEFAULTCOLOR)
       commit('SETBACKGROUNDCOLOR', '#f7f4ef')
       commit('SETSHOWSTROKE', true)
       commit('SETSTROKECOLOR', '#000000')
       commit('SETSTROKEWIDTH', 1)
       commit('SETSHOWGRID', true)
+      commit('SETSHOWCOLORCODE', true)
     },
   },
 }

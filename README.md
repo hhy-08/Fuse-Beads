@@ -87,6 +87,36 @@ src/
 
 ## 会话总结
 
+### 2026-07-22（预览缩放 + 大格子）
+
+- **会话目的**：增加图片放大功能，并放大每个格子以便放下色值。
+- **完成任务**：
+  - 预览区增加缩放条 / ±− 按钮，支持 Ctrl/⌘+滚轮缩放（50%~300%）
+  - 去掉 `max-width:100%` 强行缩小，改为可滚动查看真实比例
+  - 格子尺寸默认提升到 40px，范围 28~72，绘制最小格边 28px
+  - 旧会话格子过小时自动抬升到 40px
+- **关键决策**：
+  - 缩放只影响预览显示，导出仍按实际格子分辨率
+  - 像素渲染使用 `pixelated`，放大后边缘更清晰
+- **修改文件**：
+  - 更新 `src/components/BeadCanvas.vue`、`src/components/ControlPanel.vue`
+  - 更新 `src/store/modules/generator.ts`、`src/utils/DrawBeadPattern.ts`
+  - 更新 `src/views/generator/index.vue`、`README.md`
+
+### 2026-07-22（豆豆色值标注）
+
+- **会话目的**：让每个有色豆豆格子显示色值，方便对照拼豆。
+- **完成任务**：
+  - 每个主体/描边豆子绘制色值文字（优先 MARD 色号，否则 HEX）
+  - 色值在网格线之后绘制，避免被盖住
+  - 增加「豆豆上显示色值」开关，默认开启
+- **关键决策**：
+  - 小格子自动缩小字号；无 MARD 匹配时回退显示 HEX
+- **修改文件**：
+  - 更新 `src/utils/DrawBeadPattern.ts`、`src/store/modules/generator.ts`
+  - 更新 `src/components/ControlPanel.vue`、`src/components/BeadCanvas.vue`
+  - 更新 `src/views/generator/index.vue`、`README.md`
+
 ### 2026-07-22（逐字垂直对齐）
 
 - **会话目的**：为每个字增加垂直对齐（居顶 / 居中 / 居底）。

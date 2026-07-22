@@ -25,6 +25,7 @@
         :strokeColor="strokeColor"
         :strokeWidth="strokeWidth"
         :showGrid="showGrid"
+        :showColorCode="showColorCode"
         @UpdateText="HandleUpdateText"
         @UpdateFontId="HandleUpdateFontId"
         @UpdateLetterSpacing="HandleUpdateLetterSpacing"
@@ -40,6 +41,7 @@
         @UpdateStrokeColor="HandleUpdateStrokeColor"
         @UpdateStrokeWidth="HandleUpdateStrokeWidth"
         @UpdateShowGrid="HandleUpdateShowGrid"
+        @UpdateShowColorCode="HandleUpdateShowColorCode"
         @ExportImage="HandleExportImage"
       />
 
@@ -57,6 +59,7 @@
         :strokeColor="strokeColor"
         :strokeWidth="strokeWidth"
         :showGrid="showGrid"
+        :showColorCode="showColorCode"
       />
     </main>
   </div>
@@ -95,6 +98,7 @@ export default defineComponent({
       'strokeColor',
       'strokeWidth',
       'showGrid',
+      'showColorCode',
     ]),
   },
   /**
@@ -105,6 +109,10 @@ export default defineComponent({
       this.SETTEXT('拼豆')
     } else if (!this.charStyles || this.charStyles.length !== Array.from(this.text).length) {
       this.SETTEXT(this.text)
+    }
+    // 旧会话格子过小时自动抬升，保证色值可读
+    if (typeof this.beadSize === 'number' && this.beadSize < 28) {
+      this.SETBEADSIZE(40)
     }
   },
   methods: {
@@ -124,6 +132,7 @@ export default defineComponent({
       'SETSTROKECOLOR',
       'SETSTROKEWIDTH',
       'SETSHOWGRID',
+      'SETSHOWCOLORCODE',
     ]),
     /**
      * 更新输入文字
@@ -231,6 +240,13 @@ export default defineComponent({
      */
     HandleUpdateShowGrid(value: boolean) {
       this.SETSHOWGRID(value)
+    },
+    /**
+     * 更新色值显示开关
+     * @param value 是否显示色值
+     */
+    HandleUpdateShowColorCode(value: boolean) {
+      this.SETSHOWCOLORCODE(value)
     },
     /**
      * 触发子组件导出 PNG 图纸
