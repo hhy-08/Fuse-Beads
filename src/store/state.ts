@@ -3,7 +3,7 @@
  * 存放全局通用状态
  */
 const state = {
-  appTitle: '拼豆豆图纸生成器',
+  appTitle: 'Fuse 工具箱',
 }
 
 export default state

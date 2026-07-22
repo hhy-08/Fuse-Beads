@@ -2,7 +2,7 @@
   <div class="watermark-page">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
+        <p class="brand">{{ appBrand }}</p>
         <h1>图片水印工具</h1>
         <p class="subtitle">多图批量加水印，支持位置、平铺、旋转与自由拖动</p>
       </div>
@@ -96,6 +96,7 @@
  */
 import { defineComponent, nextTick } from 'vue'
 import JSZip from 'jszip'
+import { APPBRAND } from '@/utils/Brand'
 import ImageUploader from './components/ImageUploader.vue'
 import ImageList from './components/ImageList.vue'
 import PreviewCanvas from './components/PreviewCanvas.vue'
@@ -123,6 +124,7 @@ export default defineComponent({
   },
   data() {
     return {
+      appBrand: APPBRAND,
       imageList: [] as WatermarkImageItem[],
       currentImageIndex: -1,
       isProcessing: false,

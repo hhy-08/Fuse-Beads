@@ -2,7 +2,7 @@
   <div class="compress-page">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
+        <p class="brand">{{ appBrand }}</p>
         <h1>图片压缩工具</h1>
         <p class="subtitle">支持多图、质量/缩放/宽高限制，本地压缩后下载或打包</p>
       </div>
@@ -187,6 +187,7 @@
  */
 import { defineComponent } from 'vue'
 import JSZip from 'jszip'
+import { APPBRAND } from '@/utils/Brand'
 import {
   CompressImageFile,
   CreateUploadUid,
@@ -233,6 +234,7 @@ export default defineComponent({
   name: 'ImageCompressView',
   data() {
     return {
+      appBrand: APPBRAND,
       isDragging: false,
       isCompressing: false,
       statusText: '',

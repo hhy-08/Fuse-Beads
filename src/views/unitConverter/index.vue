@@ -2,7 +2,7 @@
   <div class="unit-page">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
+        <p class="brand">{{ appBrand }}</p>
         <h1>单位转换</h1>
         <p class="subtitle">长度、重量、面积、体积、温度一键换算</p>
       </div>
@@ -110,6 +110,7 @@
  * 参考 toolbox unit-converter：多类型换算与历史记录
  */
 import { defineComponent } from 'vue'
+import { APPBRAND } from '@/utils/Brand'
 import {
   ConvertUnitValue,
   FormatUnitNumber,
@@ -128,6 +129,7 @@ export default defineComponent({
   data() {
     const defaults = ResolveDefaultUnits('length')
     return {
+      appBrand: APPBRAND,
       measureTypes: GetMeasureTypes(),
       unitDefinitions: GetUnitDefinitions(),
       selectedType: 'length' as UnitMeasureType,

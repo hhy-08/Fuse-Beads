@@ -24,7 +24,7 @@ export function GetApiBaseUrl(): string {
  * @returns 标题文案
  */
 export function GetAppTitle(): string {
-  return process.env.VITE_APP_TITLE || import.meta.env.VITE_APP_TITLE || '拼豆豆图纸生成器'
+  return process.env.VITE_APP_TITLE || import.meta.env.VITE_APP_TITLE || 'Fuse 工具箱'
 }
 
 /**

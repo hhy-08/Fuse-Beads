@@ -2,8 +2,8 @@
   <div class="app-shell">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
-        <h1>{{ appTitle }}</h1>
+        <p class="brand">{{ appBrand }}</p>
+        <h1>拼豆工具</h1>
         <p class="subtitle">文字或图片一键生成可打印的拼豆像素图纸</p>
       </div>
       <nav class="hero-nav">
@@ -92,6 +92,7 @@ import { defineComponent } from 'vue'
 import { mapGetters, mapMutations } from 'vuex'
 import ControlPanel from '@/components/ControlPanel.vue'
 import BeadCanvas from '@/components/BeadCanvas.vue'
+import { APPBRAND } from '@/utils/Brand'
 import type { CharStyle } from '@/utils/TextToPixels'
 
 export default defineComponent({
@@ -100,9 +101,13 @@ export default defineComponent({
     ControlPanel,
     BeadCanvas,
   },
+  data() {
+    return {
+      appBrand: APPBRAND,
+    }
+  },
   computed: {
     ...mapGetters([
-      'appTitle',
       'sourceMode',
       'text',
       'fontId',
@@ -138,6 +143,12 @@ export default defineComponent({
     if (typeof this.beadSize === 'number' && this.beadSize < 28) {
       this.SETBEADSIZE(40)
     }
+  },
+  /**
+   * 挂载时同步页面标题
+   */
+  mounted() {
+    this.$store.commit('SETAPPTITLE', '拼豆工具')
   },
   methods: {
     ...mapMutations([
@@ -344,7 +355,6 @@ export default defineComponent({
 
 .hero {
   position: relative;
-  min-height: 28vh;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -357,46 +367,27 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 1.2px);
-  background-size: 18px 18px;
-  opacity: 0.35;
-  pointer-events: none;
-  animation: drift 18s linear infinite;
-}
-
 .hero-copy {
   position: relative;
   z-index: 1;
   color: #fff8ef;
-  max-width: 720px;
 }
 
 .brand {
   margin: 0 0 8px;
   font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.4rem, 6vw, 4rem);
-  letter-spacing: 0.04em;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
   line-height: 1;
-  animation: riseIn 0.7s ease both;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(1.35rem, 2.6vw, 1.9rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  animation: riseIn 0.8s ease 0.08s both;
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
 }
 
 .subtitle {
-  margin: 12px 0 0;
-  font-size: 1rem;
+  margin: 10px 0 0;
   opacity: 0.88;
-  animation: riseIn 0.8s ease 0.16s both;
 }
 
 .hero-nav {
@@ -414,11 +405,10 @@ export default defineComponent({
   border: 1px solid rgba(255, 248, 239, 0.35);
   border-radius: 999px;
   font-size: 0.9rem;
-  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.hero-nav a.router-link-active,
-.hero-nav a:hover {
+.hero-nav a:hover,
+.hero-nav a.router-link-active {
   background: rgba(255, 248, 239, 0.16);
   border-color: rgba(255, 248, 239, 0.7);
 }
@@ -431,34 +421,12 @@ export default defineComponent({
   padding: 28px 6vw 48px;
 }
 
-@keyframes riseIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes drift {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 72px 36px;
-  }
-}
-
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
   }
 
   .hero {
-    min-height: 22vh;
-    padding-top: 36px;
     flex-direction: column;
     align-items: flex-start;
   }

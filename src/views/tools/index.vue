@@ -2,9 +2,9 @@
   <div class="tools-page">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
+        <p class="brand">{{ appBrand }}</p>
         <h1>工具箱</h1>
-        <p class="subtitle">拼豆、压缩等实用小工具，选一个开始</p>
+        <p class="subtitle">{{ appDescription }}</p>
       </div>
       <nav class="hero-nav">
         <router-link to="/about">关于</router-link>
@@ -52,12 +52,15 @@
  * 展示可用工具入口，点击跳转到对应页面
  */
 import { defineComponent } from 'vue'
+import { APPBRAND, APPDESCRIPTION, APPNAME } from '@/utils/Brand'
 import { GetToolList } from '@/utils/ToolList'
 
 export default defineComponent({
   name: 'ToolsView',
   data() {
     return {
+      appBrand: APPBRAND,
+      appDescription: APPDESCRIPTION,
       tools: GetToolList(),
     }
   },
@@ -65,7 +68,7 @@ export default defineComponent({
    * 挂载时同步页面标题
    */
   mounted() {
-    this.$store.commit('SETAPPTITLE', '工具箱')
+    this.$store.commit('SETAPPTITLE', APPNAME)
   },
 })
 </script>

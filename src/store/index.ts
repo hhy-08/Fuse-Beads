@@ -33,7 +33,7 @@ export default createStore({
   modules,
   plugins: [
     createPersistedState({
-      key: 'vuex-fuse-beads',
+      key: 'vuex-fuse-kit',
       storage: window.sessionStorage,
       reducer(val: Record<string, unknown>) {
         const map: Record<string, unknown> = { ...val }

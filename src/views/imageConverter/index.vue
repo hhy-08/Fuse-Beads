@@ -2,7 +2,7 @@
   <div class="converter-page">
     <header class="hero">
       <div class="hero-copy">
-        <p class="brand">Fuse Beads</p>
+        <p class="brand">{{ appBrand }}</p>
         <h1>图片格式转换</h1>
         <p class="subtitle">多图转 JPEG / PNG / WebP / GIF，单张直下，多张打包 ZIP</p>
       </div>
@@ -114,6 +114,7 @@
  */
 import { defineComponent } from 'vue'
 import JSZip from 'jszip'
+import { APPBRAND } from '@/utils/Brand'
 import { CreateUploadUid, FormatFileSize } from '@/utils/ImageCompress'
 import {
   ConvertSingleImage,
@@ -132,6 +133,7 @@ export default defineComponent({
   name: 'ImageConverterView',
   data() {
     return {
+      appBrand: APPBRAND,
       isDragging: false,
       isConverting: false,
       convertedCount: 0,

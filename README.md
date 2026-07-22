@@ -1,6 +1,6 @@
-# Fuse Beads · 拼豆豆图纸生成器
+# Fuse Kit · Fuse 工具箱
 
-基于 **Vue 3 + Vite** 的拼豆与实用小工具集合。页面组件使用 **Options API**（Vue2 风格生命周期）实现。
+基于 **Vue 3 + Vite** 的本地实用小工具集合（Options API）。提供拼豆图纸、图片压缩、水印、格式转换、单位换算等能力。
 
 ## 功能
 
@@ -42,7 +42,7 @@ npm run dev
 | `npm run preview` | 预览构建产物 |
 
 环境变量文件：`.env.dev` / `.env.test` / `.env.prod`  
-主要字段：`VITE_ENV`、`VITE_API_BASE_URL`、`VITE_APP_TITLE`、`VITE_BASE_ROUTE`
+主要字段：`VITE_ENV`、`VITE_API_BASE_URL`、`VITE_APP_TITLE`（默认 Fuse 工具箱）、`VITE_BASE_ROUTE`
 
 ## 路由
 
@@ -93,6 +93,7 @@ src/
     BeadCanvas.vue
   utils/
     Env.ts                # 环境变量读取
+    Brand.ts              # 品牌名 / 产品名常量
     ToolList.ts           # 首页工具列表配置
     ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
     ImageConverter.ts     # 图片格式转换
@@ -105,6 +106,25 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（拼豆页顶部样式统一）
+
+- **会话目的**：拼豆工具顶部样式与其他工具页不一致。
+- **完成任务**：去掉大高度头图、点阵动画与入场动画，品牌字号与导航样式对齐其他工具页。
+- **修改文件**：`src/views/generator/index.vue`、`README.md`
+
+### 2026-07-22（项目品牌更名）
+
+- **会话目的**：名称/标题改为更符合多工具箱定位。
+- **完成任务**：
+  - 品牌统一为 **Fuse Kit**，产品名 **Fuse 工具箱**
+  - 更新 env / HTML / package.json / Vuex key / 各页页头与关于页文案
+  - 新增 `Brand.ts` 集中管理品牌常量
+- **关键决策**：拼豆仍为独立工具名；站点级标题改为工具箱，避免各页共用旧「图纸生成器」文案。
+- **修改文件**：
+  - 新增 `src/utils/Brand.ts`
+  - 更新 `.env.*`、`index.html`、`public/index.html`、`package.json`
+  - 更新各 `views/**`、`src/utils/Env.ts`、`src/store/*`、`README.md`
 
 ### 2026-07-22（单位转换工具）
 
