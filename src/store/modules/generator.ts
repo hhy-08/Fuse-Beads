@@ -29,6 +29,7 @@ export type GeneratorState = {
   imageMaxWidth: number
   imageMaxHeight: number
   imageAlphaThreshold: number
+  imageClarity: number
 }
 
 const DEFAULTCOLOR = '#0F54C0'
@@ -60,6 +61,7 @@ const generator = {
     imageMaxWidth: 48,
     imageMaxHeight: 64,
     imageAlphaThreshold: 40,
+    imageClarity: 6,
   } as GeneratorState,
   getters: {
     /**
@@ -176,6 +178,12 @@ const generator = {
      * @returns Alpha 阈值
      */
     imageAlphaThreshold: (state: GeneratorState) => state.imageAlphaThreshold,
+    /**
+     * 获取图片清晰度（1~10）
+     * @param state 模块状态
+     * @returns 清晰度
+     */
+    imageClarity: (state: GeneratorState) => state.imageClarity,
   },
   mutations: {
     /**
@@ -403,6 +411,14 @@ const generator = {
     SETIMAGEALPHATHRESHOLD(state: GeneratorState, value: number) {
       state.imageAlphaThreshold = Math.min(255, Math.max(0, Math.round(value)))
     },
+    /**
+     * 设置图片清晰度
+     * @param state 模块状态
+     * @param value 1~10，越高细节越多
+     */
+    SETIMAGECLARITY(state: GeneratorState, value: number) {
+      state.imageClarity = Math.min(10, Math.max(1, Math.round(value)))
+    },
   },
   actions: {
     /**
@@ -436,6 +452,7 @@ const generator = {
       commit('SETIMAGEMAXWIDTH', 48)
       commit('SETIMAGEMAXHEIGHT', 64)
       commit('SETIMAGEALPHATHRESHOLD', 40)
+      commit('SETIMAGECLARITY', 6)
     },
   },
 }

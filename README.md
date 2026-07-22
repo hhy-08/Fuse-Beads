@@ -86,6 +86,21 @@ src/
 
 ## 会话总结
 
+### 2026-07-22（图片清晰度 / 相近色合并）
+
+- **会话目的**：图片转拼豆时可调清晰度，相近颜色统一，并带锐化效果。
+- **完成任务**：
+  - 新增清晰度 1~10：低=相近色合并/限色；高=细节更多+锐化
+  - 采样前做 Unsharp Mask，采样后做相近色合并与最大色数限制
+  - 控制面板增加清晰度滑杆
+- **关键决策**：
+  - 低清晰度使用最近邻缩放，色块更硬朗
+  - 合并策略按色号用量从高到低并入主色，减少杂色
+- **修改文件**：
+  - 更新 `src/utils/ImageToPixels.ts`、`src/store/modules/generator.ts`
+  - 更新 `src/components/ControlPanel.vue`、`src/components/BeadCanvas.vue`
+  - 更新 `src/views/generator/index.vue`、`README.md`
+
 ### 2026-07-22（图片转拼豆）
 
 - **会话目的**：新增图片转可拼豆像素图功能。

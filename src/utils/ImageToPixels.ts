@@ -1,6 +1,7 @@
 /**
  * 图片转拼豆像素工具模块
  * 将上传图片缩小采样，并匹配到最近的 MARD 色号
+ * 支持清晰度：相近色合并 + 锐化
  */
 
 import { MARDCOLORS, type MardColor } from './MardColors'
@@ -16,6 +17,11 @@ export type ImageToPixelOptions = {
   maxHeight: number
   /** Alpha 低于该值视为空位（0~255） */
   alphaThreshold: number
+  /**
+   * 清晰度 1~10
+   * 越高：细节越多、锐化越强；越低：相近色合并越多，色块更统一
+   */
+  clarity: number
   /** 参与匹配的色卡，默认全部 MARD */
   palette?: MardColor[]
 }
@@ -68,6 +74,22 @@ function BuildRgbCache(palette: MardColor[]): RgbColor[] {
 }
 
 /**
+ * 计算两个 RGB 的加权距离平方
+ * @param left 颜色 A
+ * @param right 颜色 B
+ * @returns 距离平方
+ */
+function ColorDistanceSq(
+  left: { r: number; g: number; b: number },
+  right: { r: number; g: number; b: number },
+): number {
+  const dr = left.r - right.r
+  const dg = left.g - right.g
+  const db = left.b - right.b
+  return dr * dr * 0.3 + dg * dg * 0.59 + db * db * 0.11
+}
+
+/**
  * 在色卡中查找最近颜色（加权欧氏距离）
  * @param r 红
  * @param g 绿
@@ -86,11 +108,7 @@ function FindNearestPaletteHex(
 
   for (let i = 0; i < palette.length; i += 1) {
     const item = palette[i]
-    const dr = r - item.r
-    const dg = g - item.g
-    const db = b - item.b
-    // 人眼对绿色更敏感，略作加权
-    const distance = dr * dr * 0.3 + dg * dg * 0.59 + db * db * 0.11
+    const distance = ColorDistanceSq({ r, g, b }, item)
     if (distance < bestDistance) {
       bestDistance = distance
       bestHex = item.hex
@@ -98,6 +116,41 @@ function FindNearestPaletteHex(
   }
 
   return bestHex
+}
+
+/**
+ * 规范化清晰度到 1~10
+ * @param clarity 原始清晰度
+ * @returns 合法清晰度
+ */
+export function NormalizeClarity(clarity: number): number {
+  return Math.min(10, Math.max(1, Math.round(clarity || 6)))
+}
+
+/**
+ * 根据清晰度推导采样策略参数
+ * @param clarity 清晰度 1~10
+ * @returns 合并阈值、最大色数、锐化强度、是否平滑缩放
+ */
+export function ResolveClarityParams(clarity: number): {
+  mergeThreshold: number
+  maxColors: number
+  sharpenAmount: number
+  smoothScale: boolean
+} {
+  const level = NormalizeClarity(clarity)
+  const t = (level - 1) / 9
+
+  return {
+    // 低清晰度：合并阈值大，相近色更容易统一
+    mergeThreshold: Math.round(95 - t * 90),
+    // 低清晰度：限制最终色数，色块更整
+    maxColors: Math.round(10 + t * 140),
+    // 高清晰度：锐化更强，边缘更利落
+    sharpenAmount: Number((t * 0.85).toFixed(2)),
+    // 低清晰度用最近邻缩放，色块更硬朗
+    smoothScale: level >= 5,
+  }
 }
 
 /**
@@ -169,6 +222,144 @@ function ResolveSourceSize(source: CanvasImageSource): {
 }
 
 /**
+ * 对 ImageData 做简易锐化（原图 + amount * (原图 - 3x3模糊)）
+ * @param imageData 像素数据
+ * @param amount 锐化强度 0~1+
+ */
+function ApplyUnsharpMask(imageData: ImageData, amount: number): void {
+  if (amount <= 0.01) {
+    return
+  }
+
+  const { width, height, data } = imageData
+  const source = new Uint8ClampedArray(data)
+  const getIndex = (x: number, y: number) => (y * width + x) * 4
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sumR = 0
+      let sumG = 0
+      let sumB = 0
+      let count = 0
+
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const sx = Math.min(width - 1, Math.max(0, x + dx))
+          const sy = Math.min(height - 1, Math.max(0, y + dy))
+          const index = getIndex(sx, sy)
+          sumR += source[index]
+          sumG += source[index + 1]
+          sumB += source[index + 2]
+          count += 1
+        }
+      }
+
+      const center = getIndex(x, y)
+      const blurR = sumR / count
+      const blurG = sumG / count
+      const blurB = sumB / count
+
+      data[center] = Math.min(
+        255,
+        Math.max(0, Math.round(source[center] + amount * (source[center] - blurR))),
+      )
+      data[center + 1] = Math.min(
+        255,
+        Math.max(
+          0,
+          Math.round(source[center + 1] + amount * (source[center + 1] - blurG)),
+        ),
+      )
+      data[center + 2] = Math.min(
+        255,
+        Math.max(
+          0,
+          Math.round(source[center + 2] + amount * (source[center + 2] - blurB)),
+        ),
+      )
+    }
+  }
+}
+
+/**
+ * 将相近色合并，并限制最大色数，使色块更统一
+ * @param grid 已匹配 MARD 的彩色网格
+ * @param mergeThreshold 合并距离阈值（加权距离开方近似）
+ * @param maxColors 最大保留色数
+ * @returns 合并后的网格
+ */
+export function UnifySimilarColors(
+  grid: ColoredPixelGrid,
+  mergeThreshold: number,
+  maxColors: number,
+): ColoredPixelGrid {
+  const usage = new Map<string, number>()
+  for (let y = 0; y < grid.height; y += 1) {
+    for (let x = 0; x < grid.width; x += 1) {
+      const hex = grid.cells[y][x]
+      if (!hex) {
+        continue
+      }
+      const key = hex.toUpperCase()
+      usage.set(key, (usage.get(key) || 0) + 1)
+    }
+  }
+
+  const sorted = Array.from(usage.entries())
+    .map(([hex, count]) => ({ hex, count, rgb: ParseHexToRgb(hex) }))
+    .sort((left, right) => right.count - left.count)
+
+  if (!sorted.length) {
+    return grid
+  }
+
+  const thresholdSq = mergeThreshold * mergeThreshold
+  const remap = new Map<string, string>()
+  const kept: Array<{ hex: string; rgb: { r: number; g: number; b: number } }> =
+    []
+
+  // 按用量从高到低：相近色并入已保留主色
+  sorted.forEach((item) => {
+    let target = item.hex
+    for (let i = 0; i < kept.length; i += 1) {
+      if (ColorDistanceSq(item.rgb, kept[i].rgb) <= thresholdSq) {
+        target = kept[i].hex
+        break
+      }
+    }
+    if (target === item.hex) {
+      if (kept.length < Math.max(1, maxColors)) {
+        kept.push({ hex: item.hex, rgb: item.rgb })
+      } else {
+        // 超出色数上限时，并入最近主色
+        let best = kept[0].hex
+        let bestDistance = Number.POSITIVE_INFINITY
+        for (let i = 0; i < kept.length; i += 1) {
+          const distance = ColorDistanceSq(item.rgb, kept[i].rgb)
+          if (distance < bestDistance) {
+            bestDistance = distance
+            best = kept[i].hex
+          }
+        }
+        target = best
+      }
+    }
+    remap.set(item.hex, target)
+  })
+
+  const cells = grid.cells.map((row) =>
+    row.map((hex) => {
+      if (!hex) {
+        return null
+      }
+      return remap.get(hex.toUpperCase()) || hex.toUpperCase()
+    }),
+  )
+
+  return { width: grid.width, height: grid.height, cells }
+}
+
+/**
  * 将图片转换为匹配 MARD 色卡的彩色像素网格
  * @param options 采样与匹配配置
  * @returns 彩色像素网格
@@ -188,6 +379,7 @@ export function ConvertImageToPixels(
     return { width: 0, height: 0, cells: [] }
   }
 
+  const clarityParams = ResolveClarityParams(options.clarity)
   const canvas = document.createElement('canvas')
   canvas.width = target.width
   canvas.height = target.height
@@ -196,12 +388,14 @@ export function ConvertImageToPixels(
     return { width: 0, height: 0, cells: [] }
   }
 
-  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingEnabled = clarityParams.smoothScale
   ctx.imageSmoothingQuality = 'high'
   ctx.clearRect(0, 0, target.width, target.height)
   ctx.drawImage(options.source, 0, 0, target.width, target.height)
 
   const imageData = ctx.getImageData(0, 0, target.width, target.height)
+  ApplyUnsharpMask(imageData, clarityParams.sharpenAmount)
+
   const palette = BuildRgbCache(options.palette || MARDCOLORS)
   const alphaThreshold = Math.max(0, Math.min(255, options.alphaThreshold))
   const cells: Array<Array<string | null>> = []
@@ -224,7 +418,17 @@ export function ConvertImageToPixels(
     cells.push(row)
   }
 
-  return { width: target.width, height: target.height, cells }
+  const matchedGrid: ColoredPixelGrid = {
+    width: target.width,
+    height: target.height,
+    cells,
+  }
+
+  return UnifySimilarColors(
+    matchedGrid,
+    clarityParams.mergeThreshold,
+    clarityParams.maxColors,
+  )
 }
 
 /**

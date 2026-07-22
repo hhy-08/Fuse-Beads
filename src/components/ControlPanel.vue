@@ -287,8 +287,20 @@
         />
       </label>
 
+      <label class="field">
+        <span>清晰度 {{ imageClarity }}（低=相近色合并，高=细节锐化）</span>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          step="1"
+          :value="imageClarity"
+          @input="EmitImageClarity"
+        />
+      </label>
+
       <p class="empty-tip">
-        图片会按比例缩放到最大宽高内，并自动匹配最近的 MARD 色号。
+        图片会按比例缩放到最大宽高内，并自动匹配最近的 MARD 色号。清晰度越低，相近颜色越容易统一成同一色号。
       </p>
     </section>
 
@@ -431,6 +443,7 @@ export default defineComponent({
     imageMaxWidth: { type: Number, required: true },
     imageMaxHeight: { type: Number, required: true },
     imageAlphaThreshold: { type: Number, required: true },
+    imageClarity: { type: Number, required: true },
   },
   emits: [
     'UpdateSourceMode',
@@ -454,6 +467,7 @@ export default defineComponent({
     'UpdateImageMaxWidth',
     'UpdateImageMaxHeight',
     'UpdateImageAlphaThreshold',
+    'UpdateImageClarity',
     'ExportImage',
   ],
   data() {
@@ -719,6 +733,14 @@ export default defineComponent({
     EmitImageAlphaThreshold(event: Event) {
       const target = event.target as HTMLInputElement
       this.$emit('UpdateImageAlphaThreshold', Number(target.value))
+    },
+    /**
+     * 派发图片清晰度变更
+     * @param event 输入事件
+     */
+    EmitImageClarity(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateImageClarity', Number(target.value))
     },
     /**
      * 派发字体变更事件

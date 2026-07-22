@@ -100,6 +100,7 @@ export default defineComponent({
     imageMaxWidth: { type: Number, required: true },
     imageMaxHeight: { type: Number, required: true },
     imageAlphaThreshold: { type: Number, required: true },
+    imageClarity: { type: Number, required: true },
   },
   data() {
     return {
@@ -202,6 +203,9 @@ export default defineComponent({
       this.ScheduleRender()
     },
     imageAlphaThreshold() {
+      this.ScheduleRender()
+    },
+    imageClarity() {
       this.ScheduleRender()
     },
   },
@@ -368,6 +372,7 @@ export default defineComponent({
           maxWidth: this.imageMaxWidth,
           maxHeight: this.imageMaxHeight,
           alphaThreshold: this.imageAlphaThreshold,
+          clarity: this.imageClarity,
         })
       } catch {
         return { width: 0, height: 0, cells: [] }

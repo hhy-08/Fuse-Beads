@@ -31,6 +31,7 @@
         :imageMaxWidth="imageMaxWidth"
         :imageMaxHeight="imageMaxHeight"
         :imageAlphaThreshold="imageAlphaThreshold"
+        :imageClarity="imageClarity"
         @UpdateSourceMode="HandleUpdateSourceMode"
         @UpdateText="HandleUpdateText"
         @UpdateFontId="HandleUpdateFontId"
@@ -52,6 +53,7 @@
         @UpdateImageMaxWidth="HandleUpdateImageMaxWidth"
         @UpdateImageMaxHeight="HandleUpdateImageMaxHeight"
         @UpdateImageAlphaThreshold="HandleUpdateImageAlphaThreshold"
+        @UpdateImageClarity="HandleUpdateImageClarity"
         @ExportImage="HandleExportImage"
       />
 
@@ -75,6 +77,7 @@
         :imageMaxWidth="imageMaxWidth"
         :imageMaxHeight="imageMaxHeight"
         :imageAlphaThreshold="imageAlphaThreshold"
+        :imageClarity="imageClarity"
       />
     </main>
   </div>
@@ -119,6 +122,7 @@ export default defineComponent({
       'imageMaxWidth',
       'imageMaxHeight',
       'imageAlphaThreshold',
+      'imageClarity',
     ]),
   },
   /**
@@ -158,6 +162,7 @@ export default defineComponent({
       'SETIMAGEMAXWIDTH',
       'SETIMAGEMAXHEIGHT',
       'SETIMAGEALPHATHRESHOLD',
+      'SETIMAGECLARITY',
     ]),
     /**
      * 更新生成模式
@@ -200,6 +205,13 @@ export default defineComponent({
      */
     HandleUpdateImageAlphaThreshold(value: number) {
       this.SETIMAGEALPHATHRESHOLD(value)
+    },
+    /**
+     * 更新图片清晰度
+     * @param value 1~10
+     */
+    HandleUpdateImageClarity(value: number) {
+      this.SETIMAGECLARITY(value)
     },
     /**
      * 更新采样字体
