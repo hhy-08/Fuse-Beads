@@ -32,6 +32,7 @@
         @ApplyColorToAll="HandleApplyColorToAll"
         @ApplyFontSizeToAll="HandleApplyFontSizeToAll"
         @ApplyEffectToAll="HandleApplyEffectToAll"
+        @ApplyAlignToAll="HandleApplyAlignToAll"
         @UpdateThreshold="HandleUpdateThreshold"
         @UpdateBeadSize="HandleUpdateBeadSize"
         @UpdateBackgroundColor="HandleUpdateBackgroundColor"
@@ -115,6 +116,7 @@ export default defineComponent({
       'APPLYCOLORTOALL',
       'APPLYFONTSIZETOALL',
       'APPLYEFFECTTOALL',
+      'APPLYALIGNTOALL',
       'SETTHRESHOLD',
       'SETBEADSIZE',
       'SETBACKGROUNDCOLOR',
@@ -173,6 +175,13 @@ export default defineComponent({
       value: Pick<CharStyle, 'bold' | 'italic' | 'underline' | 'lineThrough'>,
     ) {
       this.APPLYEFFECTTOALL(value)
+    },
+    /**
+     * 垂直对齐应用到全部字符
+     * @param value 对齐方式
+     */
+    HandleApplyAlignToAll(value: CharStyle['align']) {
+      this.APPLYALIGNTOALL(value)
     },
     /**
      * 更新亮度阈值

@@ -3,6 +3,19 @@
  * 支持逐字字号/颜色/字重样式与可负字间距，输出带颜色的拼豆图案网格
  */
 
+/** 单字垂直对齐方式 */
+export type CharVerticalAlign = 'top' | 'middle' | 'bottom'
+
+/** 垂直对齐选项（供 UI 使用） */
+export const CHARALIGNOPTIONS: Array<{
+  value: CharVerticalAlign
+  label: string
+}> = [
+  { value: 'top', label: '居顶' },
+  { value: 'middle', label: '居中' },
+  { value: 'bottom', label: '居底' },
+]
+
 /** 单字样式 */
 export type CharStyle = {
   color: string
@@ -11,6 +24,7 @@ export type CharStyle = {
   italic: boolean
   underline: boolean
   lineThrough: boolean
+  align: CharVerticalAlign
 }
 
 /**
@@ -30,6 +44,7 @@ export function CreateDefaultCharStyle(
     italic: false,
     underline: false,
     lineThrough: false,
+    align: 'middle',
   }
 }
 
@@ -46,6 +61,10 @@ export function NormalizeCharStyle(
   defaultFontSize: number,
 ): CharStyle {
   const base = CreateDefaultCharStyle(defaultColor, defaultFontSize)
+  const align =
+    style?.align === 'top' || style?.align === 'bottom' || style?.align === 'middle'
+      ? style.align
+      : base.align
   return {
     color: style?.color || base.color,
     fontSize: style?.fontSize || base.fontSize,
@@ -53,7 +72,29 @@ export function NormalizeCharStyle(
     italic: style?.italic ?? base.italic,
     underline: style?.underline ?? base.underline,
     lineThrough: style?.lineThrough ?? base.lineThrough,
+    align,
   }
+}
+
+/**
+ * 按垂直对齐计算字在整行中的 Y 偏移
+ * @param align 对齐方式
+ * @param rowHeight 整行高度
+ * @param glyphHeight 单字高度
+ * @returns 顶部偏移量
+ */
+export function ResolveVerticalOffset(
+  align: CharVerticalAlign,
+  rowHeight: number,
+  glyphHeight: number,
+): number {
+  if (align === 'top') {
+    return 0
+  }
+  if (align === 'bottom') {
+    return Math.max(0, rowHeight - glyphHeight)
+  }
+  return Math.floor((rowHeight - glyphHeight) / 2)
 }
 
 /** 二值像素网格 */
@@ -232,7 +273,7 @@ export function ConvertStyledTextToPixels(
 
   const spacing = Math.round(options.letterSpacing)
   const glyphParts: Array<
-    | { type: 'glyph'; grid: PixelGrid; color: string }
+    | { type: 'glyph'; grid: PixelGrid; color: string; align: CharVerticalAlign }
     | { type: 'gap'; width: number }
   > = []
 
@@ -257,17 +298,32 @@ export function ConvertStyledTextToPixels(
       options.fontFamily,
       options.threshold,
     )
-    glyphParts.push({ type: 'glyph', grid, color: style.color })
+    glyphParts.push({
+      type: 'glyph',
+      grid,
+      color: style.color,
+      align: style.align,
+    })
   })
 
-  type PlacedGlyph = { x: number; grid: PixelGrid; color: string }
+  type PlacedGlyph = {
+    x: number
+    grid: PixelGrid
+    color: string
+    align: CharVerticalAlign
+  }
   const placed: PlacedGlyph[] = []
   let cursorX = 0
   let maxHeight = 0
 
   glyphParts.forEach((part, index) => {
     if (part.type === 'glyph') {
-      placed.push({ x: cursorX, grid: part.grid, color: part.color })
+      placed.push({
+        x: cursorX,
+        grid: part.grid,
+        color: part.color,
+        align: part.align,
+      })
       maxHeight = Math.max(maxHeight, part.grid.height)
       cursorX += part.grid.width
     } else {
@@ -293,7 +349,11 @@ export function ConvertStyledTextToPixels(
 
   placed.forEach((item) => {
     const offsetX = item.x - minX
-    const offsetY = Math.floor((maxHeight - item.grid.height) / 2)
+    const offsetY = ResolveVerticalOffset(
+      item.align,
+      maxHeight,
+      item.grid.height,
+    )
     for (let y = 0; y < item.grid.height; y += 1) {
       for (let x = 0; x < item.grid.width; x += 1) {
         if (!item.grid.cells[y][x]) {

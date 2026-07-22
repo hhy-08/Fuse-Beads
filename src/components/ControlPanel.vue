@@ -123,6 +123,25 @@
             </label>
           </div>
 
+          <div class="align-block">
+            <div class="mard-header">
+              <span>垂直对齐</span>
+              <span class="mard-hex">{{ AlignLabel(selectedStyle.align) }}</span>
+            </div>
+            <div class="align-row">
+              <button
+                v-for="option in alignOptions"
+                :key="option.value"
+                type="button"
+                class="align-btn"
+                :class="{ active: selectedStyle.align === option.value }"
+                @click="EmitSelectedAlign(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+
           <div class="action-row">
             <button type="button" class="ghost-btn" @click="EmitApplyFontSizeToAll">
               字号应用到全部
@@ -132,6 +151,9 @@
             </button>
             <button type="button" class="ghost-btn" @click="EmitApplyEffectToAll">
               样式应用到全部
+            </button>
+            <button type="button" class="ghost-btn" @click="EmitApplyAlignToAll">
+              对齐应用到全部
             </button>
           </div>
 
@@ -181,6 +203,7 @@
               fontWeight: item.bold ? '700' : '400',
               fontStyle: item.italic ? 'italic' : 'normal',
               textDecoration: BuildTextDecoration(item),
+              alignSelf: ResolvePreviewAlignSelf(item.align),
               marginRight: `${Math.max(0, letterSpacing)}px`,
               marginLeft: `${letterSpacing < 0 ? letterSpacing : 0}px`,
             }"
@@ -293,7 +316,11 @@ import {
   type MardColor,
 } from '@/utils/MardColors'
 import { FindFontOptionById, FONTOPTIONS } from '@/utils/FontOptions'
-import type { CharStyle } from '@/utils/TextToPixels'
+import {
+  CHARALIGNOPTIONS,
+  type CharStyle,
+  type CharVerticalAlign,
+} from '@/utils/TextToPixels'
 
 export default defineComponent({
   name: 'ControlPanel',
@@ -318,6 +345,7 @@ export default defineComponent({
     'ApplyColorToAll',
     'ApplyFontSizeToAll',
     'ApplyEffectToAll',
+    'ApplyAlignToAll',
     'UpdateThreshold',
     'UpdateBeadSize',
     'UpdateBackgroundColor',
@@ -331,6 +359,7 @@ export default defineComponent({
     return {
       seriesList: MARDSERIES as readonly string[],
       fontOptions: FONTOPTIONS,
+      alignOptions: CHARALIGNOPTIONS,
       beadSeries: '全部',
       strokeSeries: 'H',
       selectedCharIndex: 0,
@@ -357,6 +386,7 @@ export default defineComponent({
           italic: false,
           underline: false,
           lineThrough: false,
+          align: 'middle' as CharVerticalAlign,
         }
         return {
           char,
@@ -367,6 +397,7 @@ export default defineComponent({
           italic: style.italic,
           underline: style.underline,
           lineThrough: style.lineThrough,
+          align: style.align,
         }
       })
     },
@@ -452,6 +483,29 @@ export default defineComponent({
         parts.push('line-through')
       }
       return parts.length ? parts.join(' ') : 'none'
+    },
+    /**
+     * 对齐方式文案
+     * @param align 对齐值
+     * @returns 中文标签
+     */
+    AlignLabel(align: CharVerticalAlign): string {
+      const matched = CHARALIGNOPTIONS.find((item) => item.value === align)
+      return matched ? matched.label : '居中'
+    },
+    /**
+     * 预览区 align-self 映射
+     * @param align 对齐值
+     * @returns CSS align-self
+     */
+    ResolvePreviewAlignSelf(align: CharVerticalAlign): string {
+      if (align === 'top') {
+        return 'flex-start'
+      }
+      if (align === 'bottom') {
+        return 'flex-end'
+      }
+      return 'center'
     },
     /**
      * 根据当前选中字颜色同步色卡系列
@@ -560,6 +614,16 @@ export default defineComponent({
       })
     },
     /**
+     * 派发当前选中字垂直对齐变更
+     * @param align 对齐方式
+     */
+    EmitSelectedAlign(align: CharVerticalAlign) {
+      this.$emit('UpdateCharStyle', {
+        index: this.selectedCharIndex,
+        style: { align },
+      })
+    },
+    /**
      * 将当前字号应用到全部字符
      */
     EmitApplyFontSizeToAll() {
@@ -590,6 +654,15 @@ export default defineComponent({
         underline: this.selectedStyle.underline,
         lineThrough: this.selectedStyle.lineThrough,
       })
+    },
+    /**
+     * 将当前对齐应用到全部字符
+     */
+    EmitApplyAlignToAll() {
+      if (!this.selectedStyle) {
+        return
+      }
+      this.$emit('ApplyAlignToAll', this.selectedStyle.align)
     },
     /**
      * 派发阈值变更事件
@@ -738,10 +811,10 @@ export default defineComponent({
   color: #24324d;
   line-height: 1.4;
   word-break: break-all;
-  min-height: 52px;
+  min-height: 72px;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .char-editor {
@@ -796,7 +869,36 @@ export default defineComponent({
 }
 
 .action-row .ghost-btn:last-child {
-  grid-column: 1 / -1;
+  grid-column: auto;
+}
+
+.align-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.align-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.align-btn {
+  height: 34px;
+  border: 1px solid #d7deea;
+  border-radius: 10px;
+  background: #fff;
+  color: #31415f;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.align-btn.active,
+.align-btn:hover {
+  border-color: #3f6fe8;
+  color: #3f6fe8;
+  background: rgba(63, 111, 232, 0.08);
 }
 
 .effect-row {

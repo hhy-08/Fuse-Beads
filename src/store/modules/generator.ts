@@ -233,6 +233,17 @@ const generator = {
       }))
     },
     /**
+     * 将垂直对齐应用到全部字符
+     * @param state 模块状态
+     * @param value 对齐方式
+     */
+    APPLYALIGNTOALL(state: GeneratorState, value: CharStyle['align']) {
+      state.charStyles = state.charStyles.map((item) => ({
+        ...item,
+        align: value,
+      }))
+    },
+    /**
      * 设置像素阈值
      * @param state 模块状态
      * @param value 阈值
