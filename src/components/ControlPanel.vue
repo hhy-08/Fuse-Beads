@@ -15,6 +15,20 @@
       </label>
 
       <label class="field">
+        <span>字体</span>
+        <select class="font-select" :value="fontId" @change="EmitFontId">
+          <option
+            v-for="font in fontOptions"
+            :key="font.id"
+            :value="font.id"
+            :style="{ fontFamily: font.previewFamily }"
+          >
+            {{ font.label }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
         <span>采样字号 {{ fontSize }}px</span>
         <input
           type="range"
@@ -24,6 +38,10 @@
           @input="EmitFontSize"
         />
       </label>
+
+      <p class="font-preview" :style="{ fontFamily: currentFontPreview }">
+        预览：{{ text || '拼豆' }}
+      </p>
 
       <label class="field">
         <span>像素阈值 {{ threshold }}</span>
@@ -173,11 +191,13 @@ import {
   NormalizeHex,
   type MardColor,
 } from '@/utils/MardColors'
+import { FindFontOptionById, FONTOPTIONS } from '@/utils/FontOptions'
 
 export default defineComponent({
   name: 'ControlPanel',
   props: {
     text: { type: String, required: true },
+    fontId: { type: String, required: true },
     fontSize: { type: Number, required: true },
     threshold: { type: Number, required: true },
     beadSize: { type: Number, required: true },
@@ -190,6 +210,7 @@ export default defineComponent({
   },
   emits: [
     'UpdateText',
+    'UpdateFontId',
     'UpdateFontSize',
     'UpdateThreshold',
     'UpdateBeadSize',
@@ -204,11 +225,19 @@ export default defineComponent({
   data() {
     return {
       seriesList: MARDSERIES as readonly string[],
+      fontOptions: FONTOPTIONS,
       beadSeries: '全部',
       strokeSeries: 'H',
     }
   },
   computed: {
+    /**
+     * 当前字体预览用 CSS family
+     * @returns font-family 字符串
+     */
+    currentFontPreview(): string {
+      return FindFontOptionById(this.fontId).previewFamily
+    },
     /**
      * 当前珠子色对应的 MARD 色号文案
      * @returns 色号或「自定义」
@@ -295,6 +324,14 @@ export default defineComponent({
     EmitText(event: Event) {
       const target = event.target as HTMLInputElement
       this.$emit('UpdateText', target.value)
+    },
+    /**
+     * 派发字体变更事件
+     * @param event 变更事件
+     */
+    EmitFontId(event: Event) {
+      const target = event.target as HTMLSelectElement
+      this.$emit('UpdateFontId', target.value)
     },
     /**
      * 派发字号变更事件
@@ -430,6 +467,35 @@ export default defineComponent({
 .field input[type='range'] {
   width: 100%;
   accent-color: #3f6fe8;
+}
+
+.font-select {
+  height: 42px;
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 0.95rem;
+  color: #1f2a3d;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+}
+
+.font-select:focus {
+  border-color: #4d7dff;
+  box-shadow: 0 0 0 3px rgba(77, 125, 255, 0.18);
+}
+
+.font-preview {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f6fb;
+  border: 1px dashed #d0d8e6;
+  color: #24324d;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 .color-field {

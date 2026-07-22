@@ -5,12 +5,13 @@
 ## 功能
 
 - 文字输入 → 离屏 Canvas 采样 → 像素拼豆图案
+- 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 方格像素图纸样式（贴合常见拼豆图纸，非圆形珠）
 - MARD 291 色卡选择珠子颜色与描边颜色，格子内显示色号
 - 整块图案外轮廓描边豆（按豆数扩宽，可实际拼接）
 - Canvas 实时预览（网格尺寸 / 主体·描边·合计珠数）
 - 导出 PNG 图纸
-- 可调：采样字号、像素阈值、格子尺寸/颜色、背景色、辅助网格
+- 可调：采样字体、采样字号、像素阈值、格子尺寸/颜色、背景色、辅助网格
 
 ## 技术栈
 
@@ -79,10 +80,28 @@ src/
     TextToPixels.ts
     DrawBeadPattern.ts
     MardColors.ts          # MARD 291 色卡
+    FontOptions.ts         # 可选采样字体
   styles/main.css
 ```
 
 ## 会话总结
+
+### 2026-07-22（可选字体）
+
+- **会话目的**：为文字采样增加可切换字体。
+- **完成任务**：
+  - 新增 `FontOptions` 字体清单与 `document.fonts` 预加载
+  - 控制面板增加字体下拉与实时预览
+  - Store / 生成器页 / Canvas 贯通 `fontId`
+  - Google Fonts 补充宋体、站酷黄油体、毛笔与像素字体
+- **关键决策**：
+  - 采样前先 `EnsureFontLoaded`，避免未加载时回退系统字体导致预览不准
+  - 异步重绘使用 token 丢弃过期结果
+- **修改文件**：
+  - 新增 `src/utils/FontOptions.ts`
+  - 更新 `public/index.html`、`src/store/modules/generator.ts`
+  - 更新 `src/components/ControlPanel.vue`、`src/components/BeadCanvas.vue`
+  - 更新 `src/views/generator/index.vue`、`src/views/about/index.vue`、`README.md`
 
 ### 2026-07-22（方格像素图纸）
 

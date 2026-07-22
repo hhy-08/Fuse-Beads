@@ -12,6 +12,7 @@
       <p>基于 Vue 3 + Vite 的拼豆豆图纸生成器。</p>
       <p>工程结构参考 ilot-h5 项目，接入 Vue Router 与 Vuex（含 session 持久化）。</p>
       <ul>
+        <li>可切换中英文字体采样</li>
         <li>方格像素图纸（非圆形珠）</li>
         <li>MARD 色卡选择珠子/描边颜色</li>
         <li>整块图案外轮廓描边豆（可拼）</li>

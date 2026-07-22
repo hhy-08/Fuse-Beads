@@ -4,6 +4,7 @@
  */
 export type GeneratorState = {
   text: string
+  fontId: string
   fontSize: number
   threshold: number
   beadSize: number
@@ -19,6 +20,7 @@ const generator = {
   name: 'generator',
   state: {
     text: '拼豆',
+    fontId: 'noto-sans-sc',
     fontSize: 48,
     threshold: 200,
     beadSize: 22,
@@ -36,6 +38,12 @@ const generator = {
      * @returns 文字内容
      */
     text: (state: GeneratorState) => state.text,
+    /**
+     * 获取采样字体 ID
+     * @param state 模块状态
+     * @returns 字体 ID
+     */
+    fontId: (state: GeneratorState) => state.fontId,
     /**
      * 获取采样字号
      * @param state 模块状态
@@ -99,6 +107,14 @@ const generator = {
      */
     SETTEXT(state: GeneratorState, value: string) {
       state.text = value
+    },
+    /**
+     * 设置采样字体 ID
+     * @param state 模块状态
+     * @param value 字体 ID
+     */
+    SETFONTID(state: GeneratorState, value: string) {
+      state.fontId = value
     },
     /**
      * 设置采样字号
@@ -180,6 +196,7 @@ const generator = {
      */
     ResetGenerator({ commit }: { commit: (type: string, payload?: unknown) => void }) {
       commit('SETTEXT', '拼豆')
+      commit('SETFONTID', 'noto-sans-sc')
       commit('SETFONTSIZE', 48)
       commit('SETTHRESHOLD', 200)
       commit('SETBEADSIZE', 22)

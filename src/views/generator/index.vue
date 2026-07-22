@@ -15,6 +15,7 @@
     <main class="workspace">
       <ControlPanel
         :text="text"
+        :fontId="fontId"
         :fontSize="fontSize"
         :threshold="threshold"
         :beadSize="beadSize"
@@ -25,6 +26,7 @@
         :strokeWidth="strokeWidth"
         :showGrid="showGrid"
         @UpdateText="HandleUpdateText"
+        @UpdateFontId="HandleUpdateFontId"
         @UpdateFontSize="HandleUpdateFontSize"
         @UpdateThreshold="HandleUpdateThreshold"
         @UpdateBeadSize="HandleUpdateBeadSize"
@@ -40,6 +42,7 @@
       <BeadCanvas
         ref="beadCanvas"
         :text="text"
+        :fontId="fontId"
         :fontSize="fontSize"
         :threshold="threshold"
         :beadSize="beadSize"
@@ -74,6 +77,7 @@ export default defineComponent({
     ...mapGetters([
       'appTitle',
       'text',
+      'fontId',
       'fontSize',
       'threshold',
       'beadSize',
@@ -96,6 +100,7 @@ export default defineComponent({
   methods: {
     ...mapMutations([
       'SETTEXT',
+      'SETFONTID',
       'SETFONTSIZE',
       'SETTHRESHOLD',
       'SETBEADSIZE',
@@ -112,6 +117,13 @@ export default defineComponent({
      */
     HandleUpdateText(value: string) {
       this.SETTEXT(value)
+    },
+    /**
+     * 更新采样字体
+     * @param value 字体 ID
+     */
+    HandleUpdateFontId(value: string) {
+      this.SETFONTID(value)
     },
     /**
      * 更新采样字号

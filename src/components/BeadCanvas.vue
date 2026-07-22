@@ -30,11 +30,13 @@ import {
   type BeadPatternGrid,
 } from '../utils/TextToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
+import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
 
 export default defineComponent({
   name: 'BeadCanvas',
   props: {
     text: { type: String, required: true },
+    fontId: { type: String, required: true },
     fontSize: { type: Number, required: true },
     threshold: { type: Number, required: true },
     beadSize: { type: Number, required: true },
@@ -54,13 +56,14 @@ export default defineComponent({
       beadCount: 0,
       patternGrid: { width: 0, height: 0, cells: [] } as BeadPatternGrid,
       redrawTimer: null as ReturnType<typeof setTimeout> | null,
+      renderToken: 0,
     }
   },
   /**
    * 组件挂载后执行首次绘制，并监听窗口尺寸变化
    */
   mounted() {
-    this.RenderPattern()
+    this.ScheduleRender()
     window.addEventListener('resize', this.HandleWindowResize)
   },
   /**
@@ -72,6 +75,9 @@ export default defineComponent({
   },
   watch: {
     text() {
+      this.ScheduleRender()
+    },
+    fontId() {
       this.ScheduleRender()
     },
     fontSize() {
@@ -109,7 +115,7 @@ export default defineComponent({
     ScheduleRender() {
       this.ClearRedrawTimer()
       this.redrawTimer = setTimeout(() => {
-        this.RenderPattern()
+        void this.RenderPattern()
       }, 60)
     },
     /**
@@ -130,16 +136,27 @@ export default defineComponent({
     /**
      * 将文字转换为像素网格，按需叠加外轮廓描边豆后绘制到 Canvas
      */
-    RenderPattern() {
+    async RenderPattern() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
       if (!canvas) {
+        return
+      }
+
+      const token = this.renderToken + 1
+      this.renderToken = token
+
+      const fontOption = FindFontOptionById(this.fontId)
+      await EnsureFontLoaded(fontOption.family, this.fontSize)
+
+      // 异步字体加载期间若已有更新请求，丢弃过期结果
+      if (token !== this.renderToken) {
         return
       }
 
       const baseGrid = ConvertTextToPixels({
         text: this.text,
         fontSize: this.fontSize,
-        fontFamily: '"Noto Sans SC", "PingFang SC", sans-serif',
+        fontFamily: fontOption.family,
         threshold: this.threshold,
       })
 
