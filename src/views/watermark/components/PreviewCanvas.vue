@@ -85,6 +85,53 @@ export default defineComponent({
       this.$emit('DownloadCurrent')
     },
     /**
+     * 将屏幕坐标换算为画布坐标
+     * @param event 鼠标事件
+     * @returns 画布坐标，失败返回 null
+     */
+    ResolveCanvasPoint(event: MouseEvent): WatermarkPoint | null {
+      const canvas = this.GetCanvas()
+      if (!canvas) {
+        return null
+      }
+      const rect = canvas.getBoundingClientRect()
+      if (!rect.width || !rect.height) {
+        return null
+      }
+      return {
+        x: ((event.clientX - rect.left) * canvas.width) / rect.width,
+        y: ((event.clientY - rect.top) * canvas.height) / rect.height,
+      }
+    },
+    /**
+     * 判断点击是否命中单点水印
+     * @param point 画布坐标
+     * @returns 是否命中
+     */
+    IsHitSingleWatermark(point: WatermarkPoint): boolean {
+      const canvas = this.GetCanvas()
+      if (!canvas) {
+        return false
+      }
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        return false
+      }
+
+      ctx.font = `${this.settings.fontSize}px Arial, "Noto Sans SC", sans-serif`
+      const textWidth = ctx.measureText(this.settings.text || '').width
+      const hitArea = 24
+      const textX = this.settings.watermarkPos.x
+      const textY = this.settings.watermarkPos.y
+
+      return (
+        point.x >= textX - hitArea &&
+        point.x <= textX + textWidth + hitArea &&
+        point.y >= textY - this.settings.fontSize - hitArea &&
+        point.y <= textY + hitArea
+      )
+    },
+    /**
      * 开始拖动水印
      * @param event 鼠标事件
      */
@@ -92,33 +139,29 @@ export default defineComponent({
       if (!this.settings.isDraggable) {
         return
       }
-      const canvas = this.GetCanvas()
-      if (!canvas) {
+      const point = this.ResolveCanvasPoint(event)
+      if (!point) {
         return
       }
 
-      const rect = canvas.getBoundingClientRect()
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (event.clientX - rect.left) * scaleX
-      const y = (event.clientY - rect.top) * scaleY
-
-      const hitArea = 24
-      const textX = this.settings.watermarkPos.x
-      const textY = this.settings.watermarkPos.y
-      const textWidth = Math.max(80, this.settings.fontSize * this.settings.text.length * 0.6)
-
-      if (
-        x >= textX - hitArea &&
-        x <= textX + textWidth + hitArea &&
-        y >= textY - this.settings.fontSize - hitArea &&
-        y <= textY + hitArea
-      ) {
+      // 平铺模式：拖动画布任意位置即可整体偏移水印网格
+      if (this.settings.isTiled) {
         this.isDragging = true
         this.dragOffset = {
-          x: x - textX,
-          y: y - textY,
+          x: point.x - this.settings.watermarkPos.x,
+          y: point.y - this.settings.watermarkPos.y,
         }
+        return
+      }
+
+      if (!this.IsHitSingleWatermark(point)) {
+        return
+      }
+
+      this.isDragging = true
+      this.dragOffset = {
+        x: point.x - this.settings.watermarkPos.x,
+        y: point.y - this.settings.watermarkPos.y,
       }
     },
     /**
@@ -129,20 +172,14 @@ export default defineComponent({
       if (!this.isDragging || !this.settings.isDraggable || !this.dragOffset) {
         return
       }
-      const canvas = this.GetCanvas()
-      if (!canvas) {
+      const point = this.ResolveCanvasPoint(event)
+      if (!point) {
         return
       }
 
-      const rect = canvas.getBoundingClientRect()
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (event.clientX - rect.left) * scaleX
-      const y = (event.clientY - rect.top) * scaleY
-
       this.$emit('UpdatePosition', {
-        x: x - this.dragOffset.x,
-        y: y - this.dragOffset.y,
+        x: point.x - this.dragOffset.x,
+        y: point.y - this.dragOffset.y,
       })
     },
     /**
@@ -151,6 +188,79 @@ export default defineComponent({
     StopDrag() {
       this.isDragging = false
       this.dragOffset = null
+    },
+    /**
+     * 解析九宫格预设坐标
+     * @param canvas 画布
+     * @param textWidth 文字宽度
+     * @returns 坐标
+     */
+    ResolvePresetPoint(
+      canvas: HTMLCanvasElement,
+      textWidth: number,
+    ): WatermarkPoint {
+      const padding = 20
+      const baselineOffset = this.settings.fontSize * 0.8
+
+      switch (this.settings.position) {
+        case 'topLeft':
+          return { x: padding, y: padding + baselineOffset }
+        case 'topCenter':
+          return {
+            x: (canvas.width - textWidth) / 2,
+            y: padding + baselineOffset,
+          }
+        case 'topRight':
+          return {
+            x: canvas.width - textWidth - padding,
+            y: padding + baselineOffset,
+          }
+        case 'middleLeft':
+          return {
+            x: padding,
+            y: canvas.height / 2 + baselineOffset / 2,
+          }
+        case 'center':
+          return {
+            x: (canvas.width - textWidth) / 2,
+            y: canvas.height / 2 + baselineOffset / 2,
+          }
+        case 'middleRight':
+          return {
+            x: canvas.width - textWidth - padding,
+            y: canvas.height / 2 + baselineOffset / 2,
+          }
+        case 'bottomLeft':
+          return { x: padding, y: canvas.height - padding }
+        case 'bottomCenter':
+          return {
+            x: (canvas.width - textWidth) / 2,
+            y: canvas.height - padding,
+          }
+        default:
+          return {
+            x: canvas.width - textWidth - padding,
+            y: canvas.height - padding,
+          }
+      }
+    },
+    /**
+     * 获取平铺网格起点（支持拖动偏移）
+     * @param canvas 画布
+     * @param textWidth 文字宽度
+     * @returns 起点坐标
+     */
+    ResolveTileOrigin(
+      canvas: HTMLCanvasElement,
+      textWidth: number,
+    ): WatermarkPoint {
+      if (this.settings.isDraggable) {
+        return {
+          x: this.settings.watermarkPos.x,
+          y: this.settings.watermarkPos.y,
+        }
+      }
+      return this.ResolvePresetPoint(canvas, textWidth)
     },
     /**
      * 按当前设置重绘水印
@@ -196,74 +306,43 @@ export default defineComponent({
     DrawSingleWatermark(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
       const text = this.settings.text || ''
       const textMetrics = ctx.measureText(text)
-      let x = 0
-      let y = 0
+      const point = this.settings.isDraggable
+        ? this.settings.watermarkPos
+        : this.ResolvePresetPoint(canvas, textMetrics.width)
 
-      if (this.settings.isDraggable) {
-        x = this.settings.watermarkPos.x
-        y = this.settings.watermarkPos.y
-      } else {
-        const padding = 20
-        const baselineOffset = this.settings.fontSize * 0.8
-
-        switch (this.settings.position) {
-          case 'topLeft':
-            x = padding
-            y = padding + baselineOffset
-            break
-          case 'topCenter':
-            x = (canvas.width - textMetrics.width) / 2
-            y = padding + baselineOffset
-            break
-          case 'topRight':
-            x = canvas.width - textMetrics.width - padding
-            y = padding + baselineOffset
-            break
-          case 'middleLeft':
-            x = padding
-            y = canvas.height / 2 + baselineOffset / 2
-            break
-          case 'center':
-            x = (canvas.width - textMetrics.width) / 2
-            y = canvas.height / 2 + baselineOffset / 2
-            break
-          case 'middleRight':
-            x = canvas.width - textMetrics.width - padding
-            y = canvas.height / 2 + baselineOffset / 2
-            break
-          case 'bottomLeft':
-            x = padding
-            y = canvas.height - padding
-            break
-          case 'bottomCenter':
-            x = (canvas.width - textMetrics.width) / 2
-            y = canvas.height - padding
-            break
-          default:
-            x = canvas.width - textMetrics.width - padding
-            y = canvas.height - padding
-        }
-      }
-
-      this.DrawRotatedText(ctx, text, x, y)
+      this.DrawRotatedText(ctx, text, point.x, point.y)
     },
     /**
-     * 绘制平铺水印
+     * 绘制平铺水印（支持整体偏移）
      * @param ctx 画布上下文
      * @param canvas 画布
      */
     DrawTiledWatermark(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
       const text = this.settings.text || ''
       const textMetrics = ctx.measureText(text)
-      const tileWidth = textMetrics.width + this.settings.tileSpacingX
-      const tileHeight = this.settings.fontSize + this.settings.tileSpacingY
-      const cols = Math.ceil(canvas.width / tileWidth) + 2
-      const rows = Math.ceil(canvas.height / tileHeight) + 2
+      const tileWidth = Math.max(
+        1,
+        textMetrics.width + this.settings.tileSpacingX,
+      )
+      const tileHeight = Math.max(
+        1,
+        this.settings.fontSize + this.settings.tileSpacingY,
+      )
+      const origin = this.ResolveTileOrigin(canvas, textMetrics.width)
 
-      for (let row = -1; row < rows; row += 1) {
-        for (let col = -1; col < cols; col += 1) {
-          const x = col * tileWidth
-          const y = this.settings.fontSize + row * tileHeight
+      // 用模运算把起点收进一个周期，保证拖动时网格连续铺满
+      const startX =
+        ((origin.x % tileWidth) + tileWidth) % tileWidth - tileWidth
+      const startY =
+        ((origin.y % tileHeight) + tileHeight) % tileHeight - tileHeight
+
+      const cols = Math.ceil((canvas.width - startX) / tileWidth) + 1
+      const rows = Math.ceil((canvas.height - startY) / tileHeight) + 1
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let col = 0; col < cols; col += 1) {
+          const x = startX + col * tileWidth
+          const y = startY + this.settings.fontSize * 0.8 + row * tileHeight
           this.DrawRotatedText(ctx, text, x, y)
         }
       }

@@ -82,7 +82,7 @@
           @UpdateIsTiled="isTiled = $event"
           @UpdateTileSpacingX="tileSpacingX = $event"
           @UpdateTileSpacingY="tileSpacingY = $event"
-          @UpdateIsDraggable="isDraggable = $event"
+          @UpdateIsDraggable="HandleUpdateIsDraggable"
         />
       </div>
     </main>
@@ -256,7 +256,68 @@ export default defineComponent({
      */
     HandleUpdatePosition(value: WatermarkPositionId) {
       this.currentPosition = value
-      this.isDraggable = false
+      // 单点水印切预设时退出拖动；平铺时保留拖动，用预设作为网格起点
+      if (!this.isTiled) {
+        this.isDraggable = false
+      }
+    },
+    /**
+     * 开启/关闭自由拖动
+     * @param value 是否可拖动
+     */
+    HandleUpdateIsDraggable(value: boolean) {
+      this.isDraggable = value
+      if (!value || !this.currentImage) {
+        return
+      }
+      // 刚开启拖动时，用当前预设位置初始化偏移，避免从 (0,0) 跳变
+      if (this.watermarkPos.x === 0 && this.watermarkPos.y === 0) {
+        const image = this.currentImage.image
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          return
+        }
+        ctx.font = `${this.fontSize}px Arial, "Noto Sans SC", sans-serif`
+        const textWidth = ctx.measureText(this.watermarkText || '').width
+        const padding = 20
+        const baselineOffset = this.fontSize * 0.8
+        const width = image.width
+        const height = image.height
+        const map: Record<WatermarkPositionId, WatermarkPoint> = {
+          topLeft: { x: padding, y: padding + baselineOffset },
+          topCenter: {
+            x: (width - textWidth) / 2,
+            y: padding + baselineOffset,
+          },
+          topRight: {
+            x: width - textWidth - padding,
+            y: padding + baselineOffset,
+          },
+          middleLeft: {
+            x: padding,
+            y: height / 2 + baselineOffset / 2,
+          },
+          center: {
+            x: (width - textWidth) / 2,
+            y: height / 2 + baselineOffset / 2,
+          },
+          middleRight: {
+            x: width - textWidth - padding,
+            y: height / 2 + baselineOffset / 2,
+          },
+          bottomLeft: { x: padding, y: height - padding },
+          bottomCenter: {
+            x: (width - textWidth) / 2,
+            y: height - padding,
+          },
+          bottomRight: {
+            x: width - textWidth - padding,
+            y: height - padding,
+          },
+        }
+        this.watermarkPos = map[this.currentPosition]
+      }
     },
     /**
      * 更新拖动坐标

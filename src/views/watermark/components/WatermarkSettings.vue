@@ -80,6 +80,7 @@
         <input type="checkbox" :checked="isTiled" @change="EmitIsTiled" />
         平铺水印
       </label>
+      <p class="setting-tip">开启后可与「自由拖动」同时使用，拖动可整体偏移水印网格</p>
       <div v-if="isTiled" class="tile-settings">
         <div class="setting-item">
           <label>水平间距</label>
@@ -115,6 +116,13 @@
         <input type="checkbox" :checked="isDraggable" @change="EmitIsDraggable" />
         自由拖动
       </label>
+      <p class="setting-tip">
+        {{
+          isTiled
+            ? '平铺模式下：在预览区任意位置拖动即可偏移整片水印'
+            : '单点水印：按住文字拖动调整位置'
+        }}
+      </p>
     </div>
   </div>
 </template>
@@ -343,6 +351,13 @@ export default defineComponent({
   gap: 8px;
   cursor: pointer;
   margin-bottom: 0 !important;
+}
+
+.setting-tip {
+  margin: 6px 0 0;
+  color: #6a7a94;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .tile-settings {
