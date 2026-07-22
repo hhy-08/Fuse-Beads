@@ -46,16 +46,26 @@
     </div>
 
     <div class="setting-item">
-      <label>旋转角度</label>
+      <label>旋转角度（支持负值）</label>
       <div class="range-wrapper">
         <input
           type="range"
-          min="0"
-          max="360"
+          min="-180"
+          max="180"
+          step="1"
           :value="rotation"
           @input="EmitRotation"
         />
-        <span class="range-value">{{ rotation }}°</span>
+        <input
+          type="number"
+          class="angle-input"
+          min="-180"
+          max="180"
+          step="1"
+          :value="rotation"
+          @input="EmitRotation"
+        />
+        <span class="range-value">°</span>
       </div>
     </div>
 
@@ -217,12 +227,14 @@ export default defineComponent({
       this.$emit('UpdatePosition', value)
     },
     /**
-     * 派发旋转角度变更
+     * 派发旋转角度变更（限制在 -180~180）
      * @param event 输入事件
      */
     EmitRotation(event: Event) {
       const target = event.target as HTMLInputElement
-      this.$emit('UpdateRotation', Number(target.value))
+      const value = Number(target.value)
+      const clamped = Math.min(180, Math.max(-180, Number.isFinite(value) ? value : 0))
+      this.$emit('UpdateRotation', clamped)
     },
     /**
      * 派发平铺开关
@@ -316,9 +328,20 @@ export default defineComponent({
 }
 
 .range-value {
-  min-width: 56px;
-  text-align: right;
+  min-width: 18px;
+  text-align: left;
   color: #6a7a94;
+  font-size: 0.85rem;
+}
+
+.angle-input {
+  width: 72px;
+  border: 1px solid rgba(49, 65, 95, 0.2);
+  border-radius: 8px;
+  padding: 4px 6px;
+  background: #fff;
+  color: #31415f;
+  font: inherit;
   font-size: 0.85rem;
 }
 
