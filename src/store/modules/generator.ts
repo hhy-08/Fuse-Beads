@@ -1,11 +1,20 @@
 /**
  * 拼豆生成器 Vuex 模块
- * 管理图纸参数与预览相关状态
+ * 管理图纸参数、字间距与逐字样式状态
  */
+
+import {
+  CreateDefaultCharStyle,
+  SyncCharStyles,
+  type CharStyle,
+} from '@/utils/TextToPixels'
+
 export type GeneratorState = {
   text: string
   fontId: string
   fontSize: number
+  letterSpacing: number
+  charStyles: CharStyle[]
   threshold: number
   beadSize: number
   beadColor: string
@@ -16,15 +25,24 @@ export type GeneratorState = {
   showGrid: boolean
 }
 
+const DEFAULTCOLOR = '#0F54C0'
+const DEFAULTFONTSIZE = 48
+const DEFAULTCHARSTYLE = CreateDefaultCharStyle(DEFAULTCOLOR, DEFAULTFONTSIZE)
+
 const generator = {
   name: 'generator',
   state: {
     text: '拼豆',
     fontId: 'noto-sans-sc',
-    fontSize: 48,
+    fontSize: DEFAULTFONTSIZE,
+    letterSpacing: 2,
+    charStyles: [
+      { ...DEFAULTCHARSTYLE },
+      { ...DEFAULTCHARSTYLE },
+    ],
     threshold: 200,
     beadSize: 22,
-    beadColor: '#0F54C0',
+    beadColor: DEFAULTCOLOR,
     backgroundColor: '#f7f4ef',
     showStroke: true,
     strokeColor: '#000000',
@@ -45,11 +63,23 @@ const generator = {
      */
     fontId: (state: GeneratorState) => state.fontId,
     /**
-     * 获取采样字号
+     * 获取默认采样字号
      * @param state 模块状态
      * @returns 字号
      */
     fontSize: (state: GeneratorState) => state.fontSize,
+    /**
+     * 获取字间距（采样像素）
+     * @param state 模块状态
+     * @returns 字间距
+     */
+    letterSpacing: (state: GeneratorState) => state.letterSpacing,
+    /**
+     * 获取逐字样式列表
+     * @param state 模块状态
+     * @returns 样式数组
+     */
+    charStyles: (state: GeneratorState) => state.charStyles,
     /**
      * 获取像素阈值
      * @param state 模块状态
@@ -57,13 +87,13 @@ const generator = {
      */
     threshold: (state: GeneratorState) => state.threshold,
     /**
-     * 获取珠子尺寸
+     * 获取格子尺寸
      * @param state 模块状态
      * @returns 尺寸
      */
     beadSize: (state: GeneratorState) => state.beadSize,
     /**
-     * 获取珠子颜色
+     * 获取默认珠子颜色
      * @param state 模块状态
      * @returns 颜色
      */
@@ -101,12 +131,18 @@ const generator = {
   },
   mutations: {
     /**
-     * 设置输入文字
+     * 设置输入文字，并同步逐字样式长度
      * @param state 模块状态
      * @param value 文字
      */
     SETTEXT(state: GeneratorState, value: string) {
       state.text = value
+      state.charStyles = SyncCharStyles(
+        value,
+        state.charStyles,
+        state.beadColor,
+        state.fontSize,
+      )
     },
     /**
      * 设置采样字体 ID
@@ -117,12 +153,84 @@ const generator = {
       state.fontId = value
     },
     /**
-     * 设置采样字号
+     * 设置默认采样字号
      * @param state 模块状态
      * @param value 字号
      */
     SETFONTSIZE(state: GeneratorState, value: number) {
       state.fontSize = value
+    },
+    /**
+     * 设置字间距
+     * @param state 模块状态
+     * @param value 间距像素
+     */
+    SETLETTERSPACING(state: GeneratorState, value: number) {
+      state.letterSpacing = value
+    },
+    /**
+     * 整体替换逐字样式
+     * @param state 模块状态
+     * @param value 样式数组
+     */
+    SETCHARSTYLES(state: GeneratorState, value: CharStyle[]) {
+      state.charStyles = value
+    },
+    /**
+     * 更新单个字符样式
+     * @param state 模块状态
+     * @param payload 索引与局部样式
+     */
+    UPDATECHARSTYLE(
+      state: GeneratorState,
+      payload: { index: number; style: Partial<CharStyle> },
+    ) {
+      const target = state.charStyles[payload.index]
+      if (!target) {
+        return
+      }
+      state.charStyles.splice(payload.index, 1, {
+        ...target,
+        ...payload.style,
+      })
+    },
+    /**
+     * 将颜色应用到全部字符
+     * @param state 模块状态
+     * @param value 颜色
+     */
+    APPLYCOLORTOALL(state: GeneratorState, value: string) {
+      state.beadColor = value
+      state.charStyles = state.charStyles.map((item) => ({
+        ...item,
+        color: value,
+      }))
+    },
+    /**
+     * 将字号应用到全部字符
+     * @param state 模块状态
+     * @param value 字号
+     */
+    APPLYFONTSIZETOALL(state: GeneratorState, value: number) {
+      state.fontSize = value
+      state.charStyles = state.charStyles.map((item) => ({
+        ...item,
+        fontSize: value,
+      }))
+    },
+    /**
+     * 将文字效果应用到全部字符
+     * @param state 模块状态
+     * @param value 加粗/倾斜/下划线/删除线
+     */
+    APPLYEFFECTTOALL(
+      state: GeneratorState,
+      value: Pick<CharStyle, 'bold' | 'italic' | 'underline' | 'lineThrough'>,
+    ) {
+      state.charStyles = state.charStyles.map((item) => ({
+        ...item,
+        ...value,
+      }))
     },
     /**
      * 设置像素阈值
@@ -133,7 +241,7 @@ const generator = {
       state.threshold = value
     },
     /**
-     * 设置珠子尺寸
+     * 设置格子尺寸
      * @param state 模块状态
      * @param value 尺寸
      */
@@ -141,7 +249,7 @@ const generator = {
       state.beadSize = value
     },
     /**
-     * 设置珠子颜色
+     * 设置默认珠子颜色
      * @param state 模块状态
      * @param value 颜色
      */
@@ -194,13 +302,22 @@ const generator = {
      * 重置生成器为默认参数
      * @param context Vuex action 上下文
      */
-    ResetGenerator({ commit }: { commit: (type: string, payload?: unknown) => void }) {
+    ResetGenerator({
+      commit,
+    }: {
+      commit: (type: string, payload?: unknown) => void
+    }) {
       commit('SETTEXT', '拼豆')
       commit('SETFONTID', 'noto-sans-sc')
-      commit('SETFONTSIZE', 48)
+      commit('SETFONTSIZE', DEFAULTFONTSIZE)
+      commit('SETLETTERSPACING', 2)
+      commit('SETCHARSTYLES', [
+        { ...DEFAULTCHARSTYLE },
+        { ...DEFAULTCHARSTYLE },
+      ])
       commit('SETTHRESHOLD', 200)
       commit('SETBEADSIZE', 22)
-      commit('SETBEADCOLOR', '#0F54C0')
+      commit('SETBEADCOLOR', DEFAULTCOLOR)
       commit('SETBACKGROUNDCOLOR', '#f7f4ef')
       commit('SETSHOWSTROKE', true)
       commit('SETSTROKECOLOR', '#000000')

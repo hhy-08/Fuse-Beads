@@ -29,19 +29,16 @@
       </label>
 
       <label class="field">
-        <span>采样字号 {{ fontSize }}px</span>
+        <span>字间距 {{ letterSpacing }}px（负值可叠连）</span>
         <input
           type="range"
-          min="24"
-          max="96"
-          :value="fontSize"
-          @input="EmitFontSize"
+          min="-24"
+          max="24"
+          step="1"
+          :value="letterSpacing"
+          @input="EmitLetterSpacing"
         />
       </label>
-
-      <p class="font-preview" :style="{ fontFamily: currentFontPreview }">
-        预览：{{ text || '拼豆' }}
-      </p>
 
       <label class="field">
         <span>像素阈值 {{ threshold }}</span>
@@ -53,6 +50,143 @@
           @input="EmitThreshold"
         />
       </label>
+
+      <div class="char-editor">
+        <div class="mard-header">
+          <span>逐字设置</span>
+          <span class="mard-hex">点选字符后调颜色/大小</span>
+        </div>
+
+        <div class="char-chips">
+          <button
+            v-for="(item, index) in charItems"
+            :key="`char-${index}-${item.char}`"
+            type="button"
+            class="char-chip"
+            :class="{ active: selectedCharIndex === index }"
+            :style="{
+              fontFamily: currentFontPreview,
+              borderColor: item.color,
+              color: item.color,
+            }"
+            @click="SelectChar(index)"
+          >
+            <span class="char-glyph">{{ item.display }}</span>
+            <span class="char-meta">{{ item.fontSize }}px</span>
+          </button>
+        </div>
+
+        <template v-if="selectedStyle">
+          <label class="field">
+            <span>当前字号 {{ selectedStyle.fontSize }}px</span>
+            <input
+              type="range"
+              min="24"
+              max="96"
+              :value="selectedStyle.fontSize"
+              @input="EmitSelectedFontSize"
+            />
+          </label>
+
+          <div class="effect-row">
+            <label class="effect-toggle">
+              <input
+                type="checkbox"
+                :checked="selectedStyle.bold"
+                @change="EmitSelectedEffect('bold', $event)"
+              />
+              <span>加粗</span>
+            </label>
+            <label class="effect-toggle">
+              <input
+                type="checkbox"
+                :checked="selectedStyle.italic"
+                @change="EmitSelectedEffect('italic', $event)"
+              />
+              <span>倾斜</span>
+            </label>
+            <label class="effect-toggle">
+              <input
+                type="checkbox"
+                :checked="selectedStyle.underline"
+                @change="EmitSelectedEffect('underline', $event)"
+              />
+              <span>下划线</span>
+            </label>
+            <label class="effect-toggle">
+              <input
+                type="checkbox"
+                :checked="selectedStyle.lineThrough"
+                @change="EmitSelectedEffect('lineThrough', $event)"
+              />
+              <span>删除线</span>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button type="button" class="ghost-btn" @click="EmitApplyFontSizeToAll">
+              字号应用到全部
+            </button>
+            <button type="button" class="ghost-btn" @click="EmitApplyColorToAll">
+              颜色应用到全部
+            </button>
+            <button type="button" class="ghost-btn" @click="EmitApplyEffectToAll">
+              样式应用到全部
+            </button>
+          </div>
+
+          <div class="mard-picker">
+            <div class="mard-header">
+              <span>当前字颜色 · MARD {{ selectedColorCode }}</span>
+              <span class="mard-hex">{{ selectedStyle.color }}</span>
+            </div>
+            <div class="series-tabs">
+              <button
+                v-for="series in seriesList"
+                :key="`char-${series}`"
+                type="button"
+                class="series-tab"
+                :class="{ active: beadSeries === series }"
+                @click="SelectBeadSeries(series)"
+              >
+                {{ series }}
+              </button>
+            </div>
+            <div class="swatch-grid">
+              <button
+                v-for="color in filteredBeadColors"
+                :key="`char-color-${color.code}`"
+                type="button"
+                class="swatch"
+                :class="{ active: IsSameHex(selectedStyle.color, color.hex) }"
+                :style="{ backgroundColor: color.hex }"
+                :title="`${color.code} ${color.hex}`"
+                @click="EmitSelectedColor(color.hex)"
+              >
+                <span class="swatch-code">{{ color.code }}</span>
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <p v-else class="empty-tip">请先输入文字，再选择字符进行设置</p>
+
+        <p class="font-preview" :style="{ fontFamily: currentFontPreview }">
+          <span
+            v-for="(item, index) in charItems"
+            :key="`preview-${index}`"
+            :style="{
+              color: item.color,
+              fontSize: `${Math.max(18, Math.round(item.fontSize * 0.45))}px`,
+              fontWeight: item.bold ? '700' : '400',
+              fontStyle: item.italic ? 'italic' : 'normal',
+              textDecoration: BuildTextDecoration(item),
+              marginRight: `${Math.max(0, letterSpacing)}px`,
+              marginLeft: `${letterSpacing < 0 ? letterSpacing : 0}px`,
+            }"
+          >{{ item.display }}</span>
+        </p>
+      </div>
     </section>
 
     <section class="section">
@@ -67,39 +201,6 @@
           @input="EmitBeadSize"
         />
       </label>
-
-      <div class="mard-picker">
-        <div class="mard-header">
-          <span>珠子颜色 · MARD {{ beadColorCode }}</span>
-          <span class="mard-hex">{{ beadColor }}</span>
-        </div>
-        <div class="series-tabs">
-          <button
-            v-for="series in seriesList"
-            :key="`bead-${series}`"
-            type="button"
-            class="series-tab"
-            :class="{ active: beadSeries === series }"
-            @click="SelectBeadSeries(series)"
-          >
-            {{ series }}
-          </button>
-        </div>
-        <div class="swatch-grid">
-          <button
-            v-for="color in filteredBeadColors"
-            :key="`bead-color-${color.code}`"
-            type="button"
-            class="swatch"
-            :class="{ active: IsSameHex(beadColor, color.hex) }"
-            :style="{ backgroundColor: color.hex }"
-            :title="`${color.code} ${color.hex}`"
-            @click="EmitBeadColorByMard(color.hex)"
-          >
-            <span class="swatch-code">{{ color.code }}</span>
-          </button>
-        </div>
-      </div>
 
       <label class="color-field">
         <span>背景颜色</span>
@@ -181,9 +282,9 @@
 <script lang="ts">
 /**
  * 控制面板组件
- * 使用 Options API 收集用户配置，珠子/描边颜色采用 MARD 色卡选择
+ * 支持字间距、逐字颜色/字号，以及 MARD 色卡选择
  */
-import { defineComponent } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import {
   FindMardColorByHex,
   GetMardColorsBySeries,
@@ -192,16 +293,17 @@ import {
   type MardColor,
 } from '@/utils/MardColors'
 import { FindFontOptionById, FONTOPTIONS } from '@/utils/FontOptions'
+import type { CharStyle } from '@/utils/TextToPixels'
 
 export default defineComponent({
   name: 'ControlPanel',
   props: {
     text: { type: String, required: true },
     fontId: { type: String, required: true },
-    fontSize: { type: Number, required: true },
+    letterSpacing: { type: Number, required: true },
+    charStyles: { type: Array as PropType<CharStyle[]>, required: true },
     threshold: { type: Number, required: true },
     beadSize: { type: Number, required: true },
-    beadColor: { type: String, required: true },
     backgroundColor: { type: String, required: true },
     showStroke: { type: Boolean, required: true },
     strokeColor: { type: String, required: true },
@@ -211,10 +313,13 @@ export default defineComponent({
   emits: [
     'UpdateText',
     'UpdateFontId',
-    'UpdateFontSize',
+    'UpdateLetterSpacing',
+    'UpdateCharStyle',
+    'ApplyColorToAll',
+    'ApplyFontSizeToAll',
+    'ApplyEffectToAll',
     'UpdateThreshold',
     'UpdateBeadSize',
-    'UpdateBeadColor',
     'UpdateBackgroundColor',
     'UpdateShowStroke',
     'UpdateStrokeColor',
@@ -228,6 +333,7 @@ export default defineComponent({
       fontOptions: FONTOPTIONS,
       beadSeries: '全部',
       strokeSeries: 'H',
+      selectedCharIndex: 0,
     }
   },
   computed: {
@@ -239,11 +345,51 @@ export default defineComponent({
       return FindFontOptionById(this.fontId).previewFamily
     },
     /**
-     * 当前珠子色对应的 MARD 色号文案
-     * @returns 色号或「自定义」
+     * 逐字展示列表
+     * @returns 字符与样式组合
      */
-    beadColorCode(): string {
-      const matched = FindMardColorByHex(this.beadColor)
+    charItems(): Array<CharStyle & { char: string; display: string }> {
+      return Array.from(this.text).map((char, index) => {
+        const style = this.charStyles[index] || {
+          color: '#0F54C0',
+          fontSize: 48,
+          bold: true,
+          italic: false,
+          underline: false,
+          lineThrough: false,
+        }
+        return {
+          char,
+          display: char.trim() ? char : '␠',
+          color: style.color,
+          fontSize: style.fontSize,
+          bold: style.bold,
+          italic: style.italic,
+          underline: style.underline,
+          lineThrough: style.lineThrough,
+        }
+      })
+    },
+    /**
+     * 当前选中的字符样式
+     * @returns 样式或 null
+     */
+    selectedStyle(): CharStyle | null {
+      if (!this.charItems.length) {
+        return null
+      }
+      const index = Math.min(this.selectedCharIndex, this.charItems.length - 1)
+      return this.charStyles[index] || null
+    },
+    /**
+     * 当前选中字的 MARD 色号
+     * @returns 色号文案
+     */
+    selectedColorCode(): string {
+      if (!this.selectedStyle) {
+        return '自定义'
+      }
+      const matched = FindMardColorByHex(this.selectedStyle.color)
       return matched ? matched.code : '自定义'
     },
     /**
@@ -269,6 +415,17 @@ export default defineComponent({
       return GetMardColorsBySeries(this.strokeSeries)
     },
   },
+  watch: {
+    text() {
+      if (!this.charItems.length) {
+        this.selectedCharIndex = 0
+        return
+      }
+      if (this.selectedCharIndex > this.charItems.length - 1) {
+        this.selectedCharIndex = this.charItems.length - 1
+      }
+    },
+  },
   /**
    * 组件挂载后聚焦文字输入框，并校正色卡系列选中态
    */
@@ -278,16 +435,33 @@ export default defineComponent({
       input.focus()
       input.select()
     }
-    this.SyncSeriesFromColor()
+    this.SyncSeriesFromSelected()
   },
   methods: {
     /**
-     * 根据当前颜色同步色卡系列选中项
+     * 组装预览用 text-decoration
+     * @param style 单字样式
+     * @returns CSS text-decoration
      */
-    SyncSeriesFromColor() {
-      const beadMatched = FindMardColorByHex(this.beadColor)
-      if (beadMatched) {
-        this.beadSeries = beadMatched.series
+    BuildTextDecoration(style: CharStyle): string {
+      const parts: string[] = []
+      if (style.underline) {
+        parts.push('underline')
+      }
+      if (style.lineThrough) {
+        parts.push('line-through')
+      }
+      return parts.length ? parts.join(' ') : 'none'
+    },
+    /**
+     * 根据当前选中字颜色同步色卡系列
+     */
+    SyncSeriesFromSelected() {
+      if (this.selectedStyle) {
+        const matched = FindMardColorByHex(this.selectedStyle.color)
+        if (matched) {
+          this.beadSeries = matched.series
+        }
       }
       const strokeMatched = FindMardColorByHex(this.strokeColor)
       if (strokeMatched) {
@@ -302,6 +476,14 @@ export default defineComponent({
      */
     IsSameHex(left: string, right: string): boolean {
       return NormalizeHex(left) === NormalizeHex(right)
+    },
+    /**
+     * 选中某个字符进行编辑
+     * @param index 字符索引
+     */
+    SelectChar(index: number) {
+      this.selectedCharIndex = index
+      this.SyncSeriesFromSelected()
     },
     /**
      * 切换珠子色卡系列
@@ -334,12 +516,80 @@ export default defineComponent({
       this.$emit('UpdateFontId', target.value)
     },
     /**
-     * 派发字号变更事件
+     * 派发字间距变更事件
      * @param event 输入事件
      */
-    EmitFontSize(event: Event) {
+    EmitLetterSpacing(event: Event) {
       const target = event.target as HTMLInputElement
-      this.$emit('UpdateFontSize', Number(target.value))
+      this.$emit('UpdateLetterSpacing', Number(target.value))
+    },
+    /**
+     * 派发当前选中字号变更
+     * @param event 输入事件
+     */
+    EmitSelectedFontSize(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateCharStyle', {
+        index: this.selectedCharIndex,
+        style: { fontSize: Number(target.value) },
+      })
+    },
+    /**
+     * 派发当前选中字颜色变更
+     * @param hex MARD HEX
+     */
+    EmitSelectedColor(hex: string) {
+      this.$emit('UpdateCharStyle', {
+        index: this.selectedCharIndex,
+        style: { color: NormalizeHex(hex) },
+      })
+    },
+    /**
+     * 派发当前选中字文字效果变更
+     * @param key 效果字段
+     * @param event 变更事件
+     */
+    EmitSelectedEffect(
+      key: 'bold' | 'italic' | 'underline' | 'lineThrough',
+      event: Event,
+    ) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateCharStyle', {
+        index: this.selectedCharIndex,
+        style: { [key]: target.checked },
+      })
+    },
+    /**
+     * 将当前字号应用到全部字符
+     */
+    EmitApplyFontSizeToAll() {
+      if (!this.selectedStyle) {
+        return
+      }
+      this.$emit('ApplyFontSizeToAll', this.selectedStyle.fontSize)
+    },
+    /**
+     * 将当前颜色应用到全部字符
+     */
+    EmitApplyColorToAll() {
+      if (!this.selectedStyle) {
+        return
+      }
+      this.$emit('ApplyColorToAll', this.selectedStyle.color)
+    },
+    /**
+     * 将当前文字效果应用到全部字符
+     */
+    EmitApplyEffectToAll() {
+      if (!this.selectedStyle) {
+        return
+      }
+      this.$emit('ApplyEffectToAll', {
+        bold: this.selectedStyle.bold,
+        italic: this.selectedStyle.italic,
+        underline: this.selectedStyle.underline,
+        lineThrough: this.selectedStyle.lineThrough,
+      })
     },
     /**
      * 派发阈值变更事件
@@ -350,19 +600,12 @@ export default defineComponent({
       this.$emit('UpdateThreshold', Number(target.value))
     },
     /**
-     * 派发珠子尺寸变更事件
+     * 派发格子尺寸变更事件
      * @param event 输入事件
      */
     EmitBeadSize(event: Event) {
       const target = event.target as HTMLInputElement
       this.$emit('UpdateBeadSize', Number(target.value))
-    },
-    /**
-     * 通过 MARD 色块派发珠子颜色
-     * @param hex MARD HEX
-     */
-    EmitBeadColorByMard(hex: string) {
-      this.$emit('UpdateBeadColor', NormalizeHex(hex))
     },
     /**
      * 派发背景颜色变更事件
@@ -493,9 +736,113 @@ export default defineComponent({
   background: #f3f6fb;
   border: 1px dashed #d0d8e6;
   color: #24324d;
-  font-size: 1.35rem;
   line-height: 1.4;
   word-break: break-all;
+  min-height: 52px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.char-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e4eaf3;
+}
+
+.char-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.char-chip {
+  min-width: 52px;
+  padding: 8px 10px;
+  border: 2px solid #d7deea;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.char-chip.active {
+  box-shadow: 0 0 0 2px rgba(63, 111, 232, 0.28);
+  transform: translateY(-1px);
+}
+
+.char-glyph {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.char-meta {
+  font-size: 0.68rem;
+  color: #6a7790;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-row .ghost-btn:last-child {
+  grid-column: 1 / -1;
+}
+
+.effect-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.effect-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #d7deea;
+  border-radius: 10px;
+  background: #fff;
+  color: #31415f;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.effect-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: #3f6fe8;
+}
+
+.ghost-btn {
+  height: 34px;
+  border: 1px solid #d0d8e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #31415f;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  border-color: #3f6fe8;
+  color: #3f6fe8;
+}
+
+.empty-tip {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #8a95a8;
 }
 
 .color-field {

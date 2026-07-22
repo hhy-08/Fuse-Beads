@@ -9,19 +9,16 @@ import type { BeadPatternGrid } from './TextToPixels'
 /** 绘制配置 */
 export type DrawBeadOptions = {
   beadSize: number
-  beadColor: string
   backgroundColor: string
-  strokeColor: string
   showGrid: boolean
   showColorCode: boolean
-  gridColor: string
 }
 
 /**
  * 根据带描边层的像素网格在目标 Canvas 上绘制方格拼豆图纸
  * @param canvas 目标画布
- * @param pattern 主体 + 外轮廓描边豆网格
- * @param options 格子尺寸、颜色与网格配置
+ * @param pattern 主体 + 外轮廓描边豆网格（每格自带颜色）
+ * @param options 格子尺寸与网格配置
  */
 export function DrawBeadPattern(
   canvas: HTMLCanvasElement,
@@ -55,26 +52,17 @@ export function DrawBeadPattern(
   ctx.fillStyle = options.backgroundColor
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  const beadCode = ResolveColorCode(options.beadColor)
-  const strokeCode = ResolveColorCode(options.strokeColor)
   const canShowCode = options.showColorCode && cellSize >= 16
 
-  // 先铺满方格底色（含空位），再画主体/描边色块
   for (let y = 0; y < pattern.height; y += 1) {
     for (let x = 0; x < pattern.width; x += 1) {
-      const kind = pattern.cells[y][x]
+      const cell = pattern.cells[y][x]
       const left = padding + x * cellSize
       const top = padding + y * cellSize
-      let fillColor = options.backgroundColor
-      let colorCode = ''
-
-      if (kind === 'fill') {
-        fillColor = options.beadColor
-        colorCode = beadCode
-      } else if (kind === 'outline') {
-        fillColor = options.strokeColor
-        colorCode = strokeCode
-      }
+      const fillColor =
+        cell.kind === 'empty' ? options.backgroundColor : cell.color
+      const colorCode =
+        cell.kind === 'empty' ? '' : ResolveColorCode(cell.color)
 
       ctx.fillStyle = fillColor
       ctx.fillRect(left, top, cellSize, cellSize)
@@ -169,7 +157,9 @@ function DrawPixelGrid(
     ctx.moveTo(posX + 0.5, top)
     ctx.lineTo(posX + 0.5, bottom)
     ctx.lineWidth = isMajor ? 1.5 : 1
-    ctx.strokeStyle = isMajor ? 'rgba(40, 56, 84, 0.45)' : 'rgba(40, 56, 84, 0.18)'
+    ctx.strokeStyle = isMajor
+      ? 'rgba(40, 56, 84, 0.45)'
+      : 'rgba(40, 56, 84, 0.18)'
     ctx.stroke()
   }
 
@@ -180,7 +170,9 @@ function DrawPixelGrid(
     ctx.moveTo(left, posY + 0.5)
     ctx.lineTo(right, posY + 0.5)
     ctx.lineWidth = isMajor ? 1.5 : 1
-    ctx.strokeStyle = isMajor ? 'rgba(40, 56, 84, 0.45)' : 'rgba(40, 56, 84, 0.18)'
+    ctx.strokeStyle = isMajor
+      ? 'rgba(40, 56, 84, 0.45)'
+      : 'rgba(40, 56, 84, 0.18)'
     ctx.stroke()
   }
 }

@@ -20,14 +20,16 @@
 <script lang="ts">
 /**
  * 拼豆 Canvas 预览组件
- * 使用 Options API 生命周期与 watch 实现自动重绘与导出
+ * 支持字间距与逐字颜色/字号采样绘制
  */
-import { defineComponent } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import {
-  BuildOutlinedPattern,
-  ConvertTextToPixels,
+  BuildColoredPattern,
+  BuildOutlinedColoredPattern,
+  ConvertStyledTextToPixels,
   CountPatternBeads,
   type BeadPatternGrid,
+  type CharStyle,
 } from '../utils/TextToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
 import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
@@ -37,7 +39,8 @@ export default defineComponent({
   props: {
     text: { type: String, required: true },
     fontId: { type: String, required: true },
-    fontSize: { type: Number, required: true },
+    letterSpacing: { type: Number, required: true },
+    charStyles: { type: Array as PropType<CharStyle[]>, required: true },
     threshold: { type: Number, required: true },
     beadSize: { type: Number, required: true },
     beadColor: { type: String, required: true },
@@ -80,8 +83,14 @@ export default defineComponent({
     fontId() {
       this.ScheduleRender()
     },
-    fontSize() {
+    letterSpacing() {
       this.ScheduleRender()
+    },
+    charStyles: {
+      deep: true,
+      handler() {
+        this.ScheduleRender()
+      },
     },
     threshold() {
       this.ScheduleRender()
@@ -134,7 +143,20 @@ export default defineComponent({
       this.ScheduleRender()
     },
     /**
-     * 将文字转换为像素网格，按需叠加外轮廓描边豆后绘制到 Canvas
+     * 计算当前文字所需的最大采样字号
+     * @returns 最大字号
+     */
+    GetMaxFontSize(): number {
+      if (!this.charStyles.length) {
+        return 48
+      }
+      return this.charStyles.reduce(
+        (max, item) => Math.max(max, item.fontSize || 48),
+        24,
+      )
+    },
+    /**
+     * 将文字按逐字样式转换为像素网格并绘制到 Canvas
      */
     async RenderPattern() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
@@ -146,30 +168,30 @@ export default defineComponent({
       this.renderToken = token
 
       const fontOption = FindFontOptionById(this.fontId)
-      await EnsureFontLoaded(fontOption.family, this.fontSize)
+      await EnsureFontLoaded(fontOption.family, this.GetMaxFontSize())
 
-      // 异步字体加载期间若已有更新请求，丢弃过期结果
       if (token !== this.renderToken) {
         return
       }
 
-      const baseGrid = ConvertTextToPixels({
+      const coloredGrid = ConvertStyledTextToPixels({
         text: this.text,
-        fontSize: this.fontSize,
         fontFamily: fontOption.family,
         threshold: this.threshold,
+        letterSpacing: this.letterSpacing,
+        charStyles: this.charStyles,
+        defaultColor: this.beadColor,
+        defaultFontSize: this.GetMaxFontSize(),
       })
 
       this.patternGrid =
         this.showStroke && this.strokeWidth > 0
-          ? BuildOutlinedPattern(baseGrid, this.strokeWidth)
-          : {
-              width: baseGrid.width,
-              height: baseGrid.height,
-              cells: baseGrid.cells.map((row) =>
-                row.map((filled) => (filled ? 'fill' : 'empty')),
-              ),
-            }
+          ? BuildOutlinedColoredPattern(
+              coloredGrid,
+              this.strokeWidth,
+              this.strokeColor,
+            )
+          : BuildColoredPattern(coloredGrid)
 
       const counts = CountPatternBeads(this.patternGrid)
       this.gridWidth = this.patternGrid.width
@@ -180,12 +202,9 @@ export default defineComponent({
 
       DrawBeadPattern(canvas, this.patternGrid, {
         beadSize: this.beadSize,
-        beadColor: this.beadColor,
         backgroundColor: this.backgroundColor,
-        strokeColor: this.strokeColor,
         showGrid: this.showGrid,
         showColorCode: true,
-        gridColor: 'rgba(40, 56, 84, 0.18)',
       })
     },
     /**

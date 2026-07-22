@@ -6,12 +6,13 @@
 
 - 文字输入 → 离屏 Canvas 采样 → 像素拼豆图案
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
+- 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线
 - 方格像素图纸样式（贴合常见拼豆图纸，非圆形珠）
 - MARD 291 色卡选择珠子颜色与描边颜色，格子内显示色号
 - 整块图案外轮廓描边豆（按豆数扩宽，可实际拼接）
 - Canvas 实时预览（网格尺寸 / 主体·描边·合计珠数）
 - 导出 PNG 图纸
-- 可调：采样字体、采样字号、像素阈值、格子尺寸/颜色、背景色、辅助网格
+- 可调：采样字体、字间距、逐字样式、像素阈值、格子尺寸、背景色、辅助网格
 
 ## 技术栈
 
@@ -85,6 +86,39 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（负字距 + 文字效果）
+
+- **会话目的**：字间距支持负值叠连，并为每字增加加粗/倾斜/下划线等效果。
+- **完成任务**：
+  - 字间距范围调整为 -24~24，负值时字符可重叠连接
+  - `CharStyle` 增加 `bold` / `italic` / `underline` / `lineThrough`
+  - 采样时按样式绘制字体效果，下划线/删除线一并像素化
+  - 控制面板增加效果开关与「样式应用到全部」
+- **关键决策**：
+  - 负字距布局先计算坐标再统一偏移，避免越界
+  - 重叠区域后写覆盖先写，便于连笔观感
+- **修改文件**：
+  - 更新 `src/utils/TextToPixels.ts`、`src/utils/FontOptions.ts`
+  - 更新 `src/store/modules/generator.ts`、`src/components/ControlPanel.vue`
+  - 更新 `src/views/generator/index.vue`、`README.md`
+
+### 2026-07-22（字间距 + 逐字样式）
+
+- **会话目的**：支持调整字间距，并为每个字单独设置颜色与大小。
+- **完成任务**：
+  - 新增 `ConvertStyledTextToPixels` 按字采样并横向拼接
+  - 图案网格改为每格自带颜色，描边仍用统一描边色
+  - Store 增加 `letterSpacing`、`charStyles` 与应用到全部能力
+  - 控制面板增加字间距滑杆、字符点选、逐字色号/字号编辑
+- **关键决策**：
+  - 改文字时自动对齐 `charStyles` 长度，保留已有字的配置
+  - 垂直居中对齐不同字号字符
+- **修改文件**：
+  - 更新 `src/utils/TextToPixels.ts`、`src/utils/DrawBeadPattern.ts`
+  - 更新 `src/store/modules/generator.ts`、`src/components/ControlPanel.vue`
+  - 更新 `src/components/BeadCanvas.vue`、`src/views/generator/index.vue`
+  - 更新 `src/views/about/index.vue`、`README.md`
 
 ### 2026-07-22（可选字体）
 

@@ -16,10 +16,10 @@
       <ControlPanel
         :text="text"
         :fontId="fontId"
-        :fontSize="fontSize"
+        :letterSpacing="letterSpacing"
+        :charStyles="charStyles"
         :threshold="threshold"
         :beadSize="beadSize"
-        :beadColor="beadColor"
         :backgroundColor="backgroundColor"
         :showStroke="showStroke"
         :strokeColor="strokeColor"
@@ -27,10 +27,13 @@
         :showGrid="showGrid"
         @UpdateText="HandleUpdateText"
         @UpdateFontId="HandleUpdateFontId"
-        @UpdateFontSize="HandleUpdateFontSize"
+        @UpdateLetterSpacing="HandleUpdateLetterSpacing"
+        @UpdateCharStyle="HandleUpdateCharStyle"
+        @ApplyColorToAll="HandleApplyColorToAll"
+        @ApplyFontSizeToAll="HandleApplyFontSizeToAll"
+        @ApplyEffectToAll="HandleApplyEffectToAll"
         @UpdateThreshold="HandleUpdateThreshold"
         @UpdateBeadSize="HandleUpdateBeadSize"
-        @UpdateBeadColor="HandleUpdateBeadColor"
         @UpdateBackgroundColor="HandleUpdateBackgroundColor"
         @UpdateShowStroke="HandleUpdateShowStroke"
         @UpdateStrokeColor="HandleUpdateStrokeColor"
@@ -43,7 +46,8 @@
         ref="beadCanvas"
         :text="text"
         :fontId="fontId"
-        :fontSize="fontSize"
+        :letterSpacing="letterSpacing"
+        :charStyles="charStyles"
         :threshold="threshold"
         :beadSize="beadSize"
         :beadColor="beadColor"
@@ -66,6 +70,7 @@ import { defineComponent } from 'vue'
 import { mapGetters, mapMutations } from 'vuex'
 import ControlPanel from '@/components/ControlPanel.vue'
 import BeadCanvas from '@/components/BeadCanvas.vue'
+import type { CharStyle } from '@/utils/TextToPixels'
 
 export default defineComponent({
   name: 'GeneratorView',
@@ -79,6 +84,8 @@ export default defineComponent({
       'text',
       'fontId',
       'fontSize',
+      'letterSpacing',
+      'charStyles',
       'threshold',
       'beadSize',
       'beadColor',
@@ -90,21 +97,26 @@ export default defineComponent({
     ]),
   },
   /**
-   * 组件创建时保证默认文案存在
+   * 组件创建时保证默认文案与逐字样式存在
    */
   created() {
     if (!this.text) {
       this.SETTEXT('拼豆')
+    } else if (!this.charStyles || this.charStyles.length !== Array.from(this.text).length) {
+      this.SETTEXT(this.text)
     }
   },
   methods: {
     ...mapMutations([
       'SETTEXT',
       'SETFONTID',
-      'SETFONTSIZE',
+      'SETLETTERSPACING',
+      'UPDATECHARSTYLE',
+      'APPLYCOLORTOALL',
+      'APPLYFONTSIZETOALL',
+      'APPLYEFFECTTOALL',
       'SETTHRESHOLD',
       'SETBEADSIZE',
-      'SETBEADCOLOR',
       'SETBACKGROUNDCOLOR',
       'SETSHOWSTROKE',
       'SETSTROKECOLOR',
@@ -126,11 +138,41 @@ export default defineComponent({
       this.SETFONTID(value)
     },
     /**
-     * 更新采样字号
+     * 更新字间距
+     * @param value 间距像素
+     */
+    HandleUpdateLetterSpacing(value: number) {
+      this.SETLETTERSPACING(value)
+    },
+    /**
+     * 更新单个字符样式
+     * @param payload 索引与局部样式
+     */
+    HandleUpdateCharStyle(payload: { index: number; style: Partial<CharStyle> }) {
+      this.UPDATECHARSTYLE(payload)
+    },
+    /**
+     * 颜色应用到全部字符
+     * @param value 颜色
+     */
+    HandleApplyColorToAll(value: string) {
+      this.APPLYCOLORTOALL(value)
+    },
+    /**
+     * 字号应用到全部字符
      * @param value 字号
      */
-    HandleUpdateFontSize(value: number) {
-      this.SETFONTSIZE(value)
+    HandleApplyFontSizeToAll(value: number) {
+      this.APPLYFONTSIZETOALL(value)
+    },
+    /**
+     * 文字效果应用到全部字符
+     * @param value 加粗/倾斜/下划线/删除线
+     */
+    HandleApplyEffectToAll(
+      value: Pick<CharStyle, 'bold' | 'italic' | 'underline' | 'lineThrough'>,
+    ) {
+      this.APPLYEFFECTTOALL(value)
     },
     /**
      * 更新亮度阈值
@@ -140,18 +182,11 @@ export default defineComponent({
       this.SETTHRESHOLD(value)
     },
     /**
-     * 更新珠子尺寸
+     * 更新格子尺寸
      * @param value 尺寸
      */
     HandleUpdateBeadSize(value: number) {
       this.SETBEADSIZE(value)
-    },
-    /**
-     * 更新珠子颜色
-     * @param value 颜色
-     */
-    HandleUpdateBeadColor(value: string) {
-      this.SETBEADCOLOR(value)
     },
     /**
      * 更新背景颜色
@@ -175,7 +210,7 @@ export default defineComponent({
       this.SETSTROKECOLOR(value)
     },
     /**
-     * 更新描边粗细
+     * 更新描边宽度
      * @param value 粗细
      */
     HandleUpdateStrokeWidth(value: number) {

@@ -102,9 +102,15 @@ export async function EnsureFontLoaded(
     return
   }
 
-  const fontSpec = `bold ${fontSize}px ${family}`
+  const specs = [
+    `normal ${fontSize}px ${family}`,
+    `italic ${fontSize}px ${family}`,
+    `bold ${fontSize}px ${family}`,
+    `italic bold ${fontSize}px ${family}`,
+  ]
+
   try {
-    await document.fonts.load(fontSpec)
+    await Promise.all(specs.map((spec) => document.fonts.load(spec)))
     await document.fonts.ready
   } catch {
     // 字体加载失败时继续使用回退字体采样
