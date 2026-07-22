@@ -1,0 +1,322 @@
+<template>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="brand">Fuse Beads</p>
+        <h1>{{ appTitle }}</h1>
+        <p class="subtitle">输入文字，一键生成可打印的拼豆像素图纸</p>
+      </div>
+      <nav class="hero-nav">
+        <router-link to="/">生成器</router-link>
+        <router-link to="/about">关于</router-link>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <ControlPanel
+        :text="text"
+        :fontSize="fontSize"
+        :threshold="threshold"
+        :beadSize="beadSize"
+        :beadColor="beadColor"
+        :backgroundColor="backgroundColor"
+        :showStroke="showStroke"
+        :strokeColor="strokeColor"
+        :strokeWidth="strokeWidth"
+        :showGrid="showGrid"
+        @UpdateText="HandleUpdateText"
+        @UpdateFontSize="HandleUpdateFontSize"
+        @UpdateThreshold="HandleUpdateThreshold"
+        @UpdateBeadSize="HandleUpdateBeadSize"
+        @UpdateBeadColor="HandleUpdateBeadColor"
+        @UpdateBackgroundColor="HandleUpdateBackgroundColor"
+        @UpdateShowStroke="HandleUpdateShowStroke"
+        @UpdateStrokeColor="HandleUpdateStrokeColor"
+        @UpdateStrokeWidth="HandleUpdateStrokeWidth"
+        @UpdateShowGrid="HandleUpdateShowGrid"
+        @ExportImage="HandleExportImage"
+      />
+
+      <BeadCanvas
+        ref="beadCanvas"
+        :text="text"
+        :fontSize="fontSize"
+        :threshold="threshold"
+        :beadSize="beadSize"
+        :beadColor="beadColor"
+        :backgroundColor="backgroundColor"
+        :showStroke="showStroke"
+        :strokeColor="strokeColor"
+        :strokeWidth="strokeWidth"
+        :showGrid="showGrid"
+      />
+    </main>
+  </div>
+</template>
+
+<script lang="ts">
+/**
+ * 拼豆图纸生成器页面
+ * Options API + mapGetters/mapMutations 连接 Vuex
+ */
+import { defineComponent } from 'vue'
+import { mapGetters, mapMutations } from 'vuex'
+import ControlPanel from '@/components/ControlPanel.vue'
+import BeadCanvas from '@/components/BeadCanvas.vue'
+
+export default defineComponent({
+  name: 'GeneratorView',
+  components: {
+    ControlPanel,
+    BeadCanvas,
+  },
+  computed: {
+    ...mapGetters([
+      'appTitle',
+      'text',
+      'fontSize',
+      'threshold',
+      'beadSize',
+      'beadColor',
+      'backgroundColor',
+      'showStroke',
+      'strokeColor',
+      'strokeWidth',
+      'showGrid',
+    ]),
+  },
+  /**
+   * 组件创建时保证默认文案存在
+   */
+  created() {
+    if (!this.text) {
+      this.SETTEXT('拼豆')
+    }
+  },
+  methods: {
+    ...mapMutations([
+      'SETTEXT',
+      'SETFONTSIZE',
+      'SETTHRESHOLD',
+      'SETBEADSIZE',
+      'SETBEADCOLOR',
+      'SETBACKGROUNDCOLOR',
+      'SETSHOWSTROKE',
+      'SETSTROKECOLOR',
+      'SETSTROKEWIDTH',
+      'SETSHOWGRID',
+    ]),
+    /**
+     * 更新输入文字
+     * @param value 新文字
+     */
+    HandleUpdateText(value: string) {
+      this.SETTEXT(value)
+    },
+    /**
+     * 更新采样字号
+     * @param value 字号
+     */
+    HandleUpdateFontSize(value: number) {
+      this.SETFONTSIZE(value)
+    },
+    /**
+     * 更新亮度阈值
+     * @param value 阈值
+     */
+    HandleUpdateThreshold(value: number) {
+      this.SETTHRESHOLD(value)
+    },
+    /**
+     * 更新珠子尺寸
+     * @param value 尺寸
+     */
+    HandleUpdateBeadSize(value: number) {
+      this.SETBEADSIZE(value)
+    },
+    /**
+     * 更新珠子颜色
+     * @param value 颜色
+     */
+    HandleUpdateBeadColor(value: string) {
+      this.SETBEADCOLOR(value)
+    },
+    /**
+     * 更新背景颜色
+     * @param value 颜色
+     */
+    HandleUpdateBackgroundColor(value: string) {
+      this.SETBACKGROUNDCOLOR(value)
+    },
+    /**
+     * 更新描边开关
+     * @param value 是否描边
+     */
+    HandleUpdateShowStroke(value: boolean) {
+      this.SETSHOWSTROKE(value)
+    },
+    /**
+     * 更新描边颜色
+     * @param value 颜色
+     */
+    HandleUpdateStrokeColor(value: string) {
+      this.SETSTROKECOLOR(value)
+    },
+    /**
+     * 更新描边粗细
+     * @param value 粗细
+     */
+    HandleUpdateStrokeWidth(value: number) {
+      this.SETSTROKEWIDTH(value)
+    },
+    /**
+     * 更新网格显示开关
+     * @param value 是否显示网格
+     */
+    HandleUpdateShowGrid(value: boolean) {
+      this.SETSHOWGRID(value)
+    },
+    /**
+     * 触发子组件导出 PNG 图纸
+     */
+    HandleExportImage() {
+      const canvasRef = this.$refs.beadCanvas as {
+        ExportImage?: () => void
+      }
+      if (canvasRef && typeof canvasRef.ExportImage === 'function') {
+        canvasRef.ExportImage()
+      }
+    },
+  },
+})
+</script>
+
+<style scoped>
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  position: relative;
+  min-height: 28vh;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 48px 6vw 36px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
+    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
+    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 1.2px);
+  background-size: 18px 18px;
+  opacity: 0.35;
+  pointer-events: none;
+  animation: drift 18s linear infinite;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  color: #fff8ef;
+  max-width: 720px;
+}
+
+.brand {
+  margin: 0 0 8px;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  animation: riseIn 0.7s ease both;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  animation: riseIn 0.8s ease 0.08s both;
+}
+
+.subtitle {
+  margin: 12px 0 0;
+  font-size: 1rem;
+  opacity: 0.88;
+  animation: riseIn 0.8s ease 0.16s both;
+}
+
+.hero-nav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  align-self: flex-start;
+}
+
+.hero-nav a {
+  color: #fff8ef;
+  text-decoration: none;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 248, 239, 0.35);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hero-nav a.router-link-active,
+.hero-nav a:hover {
+  background: rgba(255, 248, 239, 0.16);
+  border-color: rgba(255, 248, 239, 0.7);
+}
+
+.workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 24px;
+  padding: 28px 6vw 48px;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 72px 36px;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: 22vh;
+    padding-top: 36px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
