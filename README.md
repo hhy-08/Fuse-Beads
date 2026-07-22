@@ -5,10 +5,12 @@
 ## 功能
 
 - 文字输入 → 离屏 Canvas 采样 → 像素拼豆图案
-- 描边开关、自定义描边颜色、描边粗细
-- Canvas 实时预览（网格尺寸 / 珠子数量）
+- 方格像素图纸样式（贴合常见拼豆图纸，非圆形珠）
+- MARD 291 色卡选择珠子颜色与描边颜色，格子内显示色号
+- 整块图案外轮廓描边豆（按豆数扩宽，可实际拼接）
+- Canvas 实时预览（网格尺寸 / 主体·描边·合计珠数）
 - 导出 PNG 图纸
-- 可调：采样字号、像素阈值、珠子尺寸/颜色、背景色、辅助网格
+- 可调：采样字号、像素阈值、格子尺寸/颜色、背景色、辅助网格
 
 ## 技术栈
 
@@ -76,10 +78,59 @@ src/
     Env.ts                # 环境变量读取
     TextToPixels.ts
     DrawBeadPattern.ts
+    MardColors.ts          # MARD 291 色卡
   styles/main.css
 ```
 
 ## 会话总结
+
+### 2026-07-22（方格像素图纸）
+
+- **会话目的**：按参考拼豆图纸，将圆形珠改为方格像素格样式。
+- **完成任务**：
+  - 绘制改为无间隙方格填充，去掉圆形与高光
+  - 叠加每格细线 / 每 10 格加粗的坐标网格
+  - 格子足够大时自动绘制 MARD 色号
+  - 默认格子尺寸调整为 22px，便于看清色号
+- **关键决策**：
+  - 视觉对齐常见拼豆图纸：方格、色号、计数网格
+  - 空位保留背景色方格，保证整张图为完整像素网格
+- **修改文件**：
+  - 更新 `src/utils/DrawBeadPattern.ts`、`src/components/BeadCanvas.vue`
+  - 更新 `src/components/ControlPanel.vue`、`src/store/modules/generator.ts`
+  - 更新 `src/views/about/index.vue`、`README.md`
+
+### 2026-07-22（外轮廓描边豆）
+
+- **会话目的**：按用户反馈，描边改为整块文字/图案外围的可拼豆子，而非单颗珠线框。
+- **完成任务**：
+  - 新增 `BuildOutlinedPattern`：按切比雪夫距离外扩生成描边豆层
+  - 绘制层用描边色填充 outline 格子，主体用珠子色
+  - 预览统计区分主体 / 描边 / 合计豆数
+  - 控件文案改为「描边宽度 N 豆」
+- **关键决策**：
+  - 描边宽度单位为豆数（1–5），默认 1 圈
+  - 关闭描边时仅绘制主体文字豆
+- **修改文件**：
+  - 更新 `src/utils/TextToPixels.ts`、`src/utils/DrawBeadPattern.ts`
+  - 更新 `src/components/BeadCanvas.vue`、`src/components/ControlPanel.vue`
+  - 更新 `src/store/modules/generator.ts`、`src/views/about/index.vue`、`README.md`
+
+### 2026-07-22（MARD 色卡 + 描边修复）
+
+- **会话目的**：珠子/描边颜色改为 MARD 色卡选择，并修复描边看不见的问题。
+- **完成任务**：
+  - 新增 MARD 291 色卡数据与系列筛选工具
+  - 控制面板用色块选择器替换自由取色（珠子色、描边色）
+  - 绘制改为「先填充、后描边」两遍流程，描边内缩半线宽避免被相邻珠子覆盖
+  - 默认珠子色改为 MARD C8，描边色改为 MARD H7
+- **关键决策**：
+  - 背景色仍保留自由取色（图纸底色不必受色卡限制）
+  - 描边最小线宽保证 ≥1px，粗细范围调整为 1–5px
+- **修改文件**：
+  - 新增 `src/utils/MardColors.ts`
+  - 更新 `src/components/ControlPanel.vue`、`src/utils/DrawBeadPattern.ts`
+  - 更新 `src/store/modules/generator.ts`、`src/views/about/index.vue`、`README.md`
 
 ### 2026-07-22
 

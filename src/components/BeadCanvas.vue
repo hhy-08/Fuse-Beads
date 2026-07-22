@@ -3,7 +3,10 @@
     <div class="preview-header">
       <div>
         <h2>Canvas 预览</h2>
-        <p>网格 {{ gridWidth }} × {{ gridHeight }} · 珠子数 {{ beadCount }}</p>
+        <p>
+          网格 {{ gridWidth }} × {{ gridHeight }} · 主体 {{ fillCount }} · 描边
+          {{ outlineCount }} · 合计 {{ beadCount }}
+        </p>
       </div>
       <span class="hint">参数变化后自动重绘</span>
     </div>
@@ -21,9 +24,10 @@
  */
 import { defineComponent } from 'vue'
 import {
+  BuildOutlinedPattern,
   ConvertTextToPixels,
-  CountFilledBeads,
-  type PixelGrid,
+  CountPatternBeads,
+  type BeadPatternGrid,
 } from '../utils/TextToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
 
@@ -45,8 +49,10 @@ export default defineComponent({
     return {
       gridWidth: 0,
       gridHeight: 0,
+      fillCount: 0,
+      outlineCount: 0,
       beadCount: 0,
-      pixelGrid: { width: 0, height: 0, cells: [] } as PixelGrid,
+      patternGrid: { width: 0, height: 0, cells: [] } as BeadPatternGrid,
       redrawTimer: null as ReturnType<typeof setTimeout> | null,
     }
   },
@@ -122,7 +128,7 @@ export default defineComponent({
       this.ScheduleRender()
     },
     /**
-     * 将文字转换为像素网格并绘制到 Canvas
+     * 将文字转换为像素网格，按需叠加外轮廓描边豆后绘制到 Canvas
      */
     RenderPattern() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
@@ -130,26 +136,39 @@ export default defineComponent({
         return
       }
 
-      this.pixelGrid = ConvertTextToPixels({
+      const baseGrid = ConvertTextToPixels({
         text: this.text,
         fontSize: this.fontSize,
         fontFamily: '"Noto Sans SC", "PingFang SC", sans-serif',
         threshold: this.threshold,
       })
 
-      this.gridWidth = this.pixelGrid.width
-      this.gridHeight = this.pixelGrid.height
-      this.beadCount = CountFilledBeads(this.pixelGrid)
+      this.patternGrid =
+        this.showStroke && this.strokeWidth > 0
+          ? BuildOutlinedPattern(baseGrid, this.strokeWidth)
+          : {
+              width: baseGrid.width,
+              height: baseGrid.height,
+              cells: baseGrid.cells.map((row) =>
+                row.map((filled) => (filled ? 'fill' : 'empty')),
+              ),
+            }
 
-      DrawBeadPattern(canvas, this.pixelGrid, {
+      const counts = CountPatternBeads(this.patternGrid)
+      this.gridWidth = this.patternGrid.width
+      this.gridHeight = this.patternGrid.height
+      this.fillCount = counts.fillCount
+      this.outlineCount = counts.outlineCount
+      this.beadCount = counts.totalCount
+
+      DrawBeadPattern(canvas, this.patternGrid, {
         beadSize: this.beadSize,
         beadColor: this.beadColor,
         backgroundColor: this.backgroundColor,
-        showStroke: this.showStroke,
         strokeColor: this.strokeColor,
-        strokeWidth: this.strokeWidth,
         showGrid: this.showGrid,
-        gridColor: 'rgba(40, 56, 84, 0.12)',
+        showColorCode: true,
+        gridColor: 'rgba(40, 56, 84, 0.18)',
       })
     },
     /**
@@ -157,7 +176,7 @@ export default defineComponent({
      */
     ExportImage() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
-      if (!canvas || !this.pixelGrid.width) {
+      if (!canvas || !this.patternGrid.width) {
         return
       }
 

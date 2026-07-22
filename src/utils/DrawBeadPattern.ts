@@ -1,30 +1,31 @@
 /**
  * 拼豆图案 Canvas 绘制与导出工具模块
+ * 以像素方格图纸样式绘制（对齐常见拼豆图纸：方格、网格、色号）
  */
 
-import type { PixelGrid } from './TextToPixels'
+import { FindMardColorByHex } from './MardColors'
+import type { BeadPatternGrid } from './TextToPixels'
 
 /** 绘制配置 */
 export type DrawBeadOptions = {
   beadSize: number
   beadColor: string
   backgroundColor: string
-  showStroke: boolean
   strokeColor: string
-  strokeWidth: number
   showGrid: boolean
+  showColorCode: boolean
   gridColor: string
 }
 
 /**
- * 根据像素网格在目标 Canvas 上绘制拼豆图案
+ * 根据带描边层的像素网格在目标 Canvas 上绘制方格拼豆图纸
  * @param canvas 目标画布
- * @param grid 像素网格
- * @param options 珠子尺寸、颜色与描边等配置
+ * @param pattern 主体 + 外轮廓描边豆网格
+ * @param options 格子尺寸、颜色与网格配置
  */
 export function DrawBeadPattern(
   canvas: HTMLCanvasElement,
-  grid: PixelGrid,
+  pattern: BeadPatternGrid,
   options: DrawBeadOptions,
 ): void {
   const ctx = canvas.getContext('2d')
@@ -32,11 +33,10 @@ export function DrawBeadPattern(
     return
   }
 
-  const gap = Math.max(1, Math.round(options.beadSize * 0.08))
-  const cellSize = options.beadSize + gap
-  const padding = Math.max(12, Math.round(options.beadSize * 0.6))
+  const cellSize = Math.max(8, Math.round(options.beadSize))
+  const padding = Math.max(16, Math.round(cellSize * 0.8))
 
-  if (!grid.width || !grid.height) {
+  if (!pattern.width || !pattern.height) {
     canvas.width = 320
     canvas.height = 200
     ctx.fillStyle = options.backgroundColor
@@ -49,89 +49,138 @@ export function DrawBeadPattern(
     return
   }
 
-  canvas.width = grid.width * cellSize + padding * 2 - gap
-  canvas.height = grid.height * cellSize + padding * 2 - gap
+  canvas.width = pattern.width * cellSize + padding * 2
+  canvas.height = pattern.height * cellSize + padding * 2
 
   ctx.fillStyle = options.backgroundColor
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  if (options.showGrid) {
-    DrawGuideGrid(ctx, grid, cellSize, padding, gap, options.gridColor)
+  const beadCode = ResolveColorCode(options.beadColor)
+  const strokeCode = ResolveColorCode(options.strokeColor)
+  const canShowCode = options.showColorCode && cellSize >= 16
+
+  // 先铺满方格底色（含空位），再画主体/描边色块
+  for (let y = 0; y < pattern.height; y += 1) {
+    for (let x = 0; x < pattern.width; x += 1) {
+      const kind = pattern.cells[y][x]
+      const left = padding + x * cellSize
+      const top = padding + y * cellSize
+      let fillColor = options.backgroundColor
+      let colorCode = ''
+
+      if (kind === 'fill') {
+        fillColor = options.beadColor
+        colorCode = beadCode
+      } else if (kind === 'outline') {
+        fillColor = options.strokeColor
+        colorCode = strokeCode
+      }
+
+      ctx.fillStyle = fillColor
+      ctx.fillRect(left, top, cellSize, cellSize)
+
+      if (canShowCode && colorCode) {
+        DrawCellLabel(ctx, left, top, cellSize, colorCode, fillColor)
+      }
+    }
   }
 
-  const radius = options.beadSize / 2
-
-  for (let y = 0; y < grid.height; y += 1) {
-    for (let x = 0; x < grid.width; x += 1) {
-      if (!grid.cells[y][x]) {
-        continue
-      }
-
-      const centerX = padding + x * cellSize + radius
-      const centerY = padding + y * cellSize + radius
-
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-      ctx.fillStyle = options.beadColor
-      ctx.fill()
-
-      if (options.showStroke && options.strokeWidth > 0) {
-        ctx.lineWidth = options.strokeWidth
-        ctx.strokeStyle = options.strokeColor
-        ctx.stroke()
-      }
-
-      // 珠子高光，增强立体感
-      ctx.beginPath()
-      ctx.arc(
-        centerX - radius * 0.28,
-        centerY - radius * 0.28,
-        radius * 0.22,
-        0,
-        Math.PI * 2,
-      )
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
-      ctx.fill()
-    }
+  if (options.showGrid) {
+    DrawPixelGrid(ctx, pattern, cellSize, padding)
   }
 }
 
 /**
- * 绘制辅助定位网格线
+ * 解析 HEX 对应的 MARD 色号，找不到则返回空串
+ * @param hex 颜色值
+ * @returns 色号文案
+ */
+function ResolveColorCode(hex: string): string {
+  const matched = FindMardColorByHex(hex)
+  return matched ? matched.code : ''
+}
+
+/**
+ * 判断颜色是否偏深，用于选择标签对比色
+ * @param hex 颜色值
+ * @returns 是否为深色
+ */
+function IsDarkColor(hex: string): boolean {
+  const normalized = hex.replace('#', '')
+  if (normalized.length !== 6) {
+    return false
+  }
+  const red = parseInt(normalized.slice(0, 2), 16)
+  const green = parseInt(normalized.slice(2, 4), 16)
+  const blue = parseInt(normalized.slice(4, 6), 16)
+  const luminance = (red * 299 + green * 587 + blue * 114) / 1000
+  return luminance < 140
+}
+
+/**
+ * 在方格中心绘制色号文字
+ * @param ctx Canvas 上下文
+ * @param left 格子左边界
+ * @param top 格子上边界
+ * @param cellSize 格子边长
+ * @param code 色号
+ * @param fillColor 格子底色
+ */
+function DrawCellLabel(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  cellSize: number,
+  code: string,
+  fillColor: string,
+): void {
+  const fontSize = Math.max(8, Math.floor(cellSize * 0.34))
+  ctx.font = `600 ${fontSize}px "Noto Sans SC", "PingFang SC", sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = IsDarkColor(fillColor) ? '#ffffff' : '#2a3140'
+  ctx.fillText(code, left + cellSize / 2, top + cellSize / 2 + 0.5)
+}
+
+/**
+ * 绘制像素图纸网格线（每格细线，每 10 格加粗）
  * @param ctx Canvas 2D 上下文
- * @param grid 像素网格
+ * @param pattern 图案网格
  * @param cellSize 单元格尺寸
  * @param padding 外边距
- * @param gap 珠子间距
- * @param gridColor 网格颜色
  */
-function DrawGuideGrid(
+function DrawPixelGrid(
   ctx: CanvasRenderingContext2D,
-  grid: PixelGrid,
+  pattern: BeadPatternGrid,
   cellSize: number,
   padding: number,
-  gap: number,
-  gridColor: string,
 ): void {
-  const width = grid.width * cellSize - gap
-  const height = grid.height * cellSize - gap
+  const left = padding
+  const top = padding
+  const right = padding + pattern.width * cellSize
+  const bottom = padding + pattern.height * cellSize
 
-  ctx.strokeStyle = gridColor
-  ctx.lineWidth = 1
+  ctx.lineCap = 'butt'
 
-  for (let x = 0; x <= grid.width; x += 1) {
-    const posX = padding + x * cellSize - gap / 2
+  for (let x = 0; x <= pattern.width; x += 1) {
+    const posX = padding + x * cellSize
+    const isMajor = x % 10 === 0
     ctx.beginPath()
-    ctx.moveTo(posX, padding - gap / 2)
-    ctx.lineTo(posX, padding - gap / 2 + height + gap)
+    ctx.moveTo(posX + 0.5, top)
+    ctx.lineTo(posX + 0.5, bottom)
+    ctx.lineWidth = isMajor ? 1.5 : 1
+    ctx.strokeStyle = isMajor ? 'rgba(40, 56, 84, 0.45)' : 'rgba(40, 56, 84, 0.18)'
     ctx.stroke()
   }
 
-  for (let y = 0; y <= grid.height; y += 1) {
-    const posY = padding + y * cellSize - gap / 2
+  for (let y = 0; y <= pattern.height; y += 1) {
+    const posY = padding + y * cellSize
+    const isMajor = y % 10 === 0
     ctx.beginPath()
-    ctx.moveTo(padding - gap / 2, posY)
-    ctx.lineTo(padding - gap / 2 + width + gap, posY)
+    ctx.moveTo(left, posY + 0.5)
+    ctx.lineTo(right, posY + 0.5)
+    ctx.lineWidth = isMajor ? 1.5 : 1
+    ctx.strokeStyle = isMajor ? 'rgba(40, 56, 84, 0.45)' : 'rgba(40, 56, 84, 0.18)'
     ctx.stroke()
   }
 }

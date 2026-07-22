@@ -21,12 +21,12 @@ const generator = {
     text: '拼豆',
     fontSize: 48,
     threshold: 200,
-    beadSize: 14,
-    beadColor: '#2f6fed',
+    beadSize: 22,
+    beadColor: '#0F54C0',
     backgroundColor: '#f7f4ef',
     showStroke: true,
-    strokeColor: '#1a1a1a',
-    strokeWidth: 1.5,
+    strokeColor: '#000000',
+    strokeWidth: 1,
     showGrid: true,
   } as GeneratorState,
   getters: {
@@ -79,9 +79,9 @@ const generator = {
      */
     strokeColor: (state: GeneratorState) => state.strokeColor,
     /**
-     * 获取描边粗细
+     * 获取描边宽度（豆数）
      * @param state 模块状态
-     * @returns 粗细
+     * @returns 描边层数
      */
     strokeWidth: (state: GeneratorState) => state.strokeWidth,
     /**
@@ -157,9 +157,9 @@ const generator = {
       state.strokeColor = value
     },
     /**
-     * 设置描边粗细
+     * 设置描边宽度（豆数）
      * @param state 模块状态
-     * @param value 粗细
+     * @param value 描边层数
      */
     SETSTROKEWIDTH(state: GeneratorState, value: number) {
       state.strokeWidth = value
@@ -182,12 +182,12 @@ const generator = {
       commit('SETTEXT', '拼豆')
       commit('SETFONTSIZE', 48)
       commit('SETTHRESHOLD', 200)
-      commit('SETBEADSIZE', 14)
-      commit('SETBEADCOLOR', '#2f6fed')
+      commit('SETBEADSIZE', 22)
+      commit('SETBEADCOLOR', '#0F54C0')
       commit('SETBACKGROUNDCOLOR', '#f7f4ef')
       commit('SETSHOWSTROKE', true)
-      commit('SETSTROKECOLOR', '#1a1a1a')
-      commit('SETSTROKEWIDTH', 1.5)
+      commit('SETSTROKECOLOR', '#000000')
+      commit('SETSTROKEWIDTH', 1)
       commit('SETSHOWGRID', true)
     },
   },
