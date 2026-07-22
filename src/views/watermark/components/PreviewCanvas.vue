@@ -1,6 +1,11 @@
 <template>
   <div class="preview-section">
-    <h3>水印预览</h3>
+    <div class="preview-head">
+      <h3>水印预览</h3>
+      <button type="button" class="download-current" @click="EmitDownloadCurrent">
+        下载当前图片
+      </button>
+    </div>
     <div
       class="preview-wrapper"
       :class="{ draggable: settings.isDraggable }"
@@ -38,7 +43,7 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['UpdatePosition'],
+  emits: ['UpdatePosition', 'DownloadCurrent'],
   data() {
     return {
       isDragging: false,
@@ -72,6 +77,12 @@ export default defineComponent({
      */
     GetCanvas(): HTMLCanvasElement | null {
       return (this.$refs.canvas as HTMLCanvasElement) || null
+    },
+    /**
+     * 派发下载当前预览
+     */
+    EmitDownloadCurrent() {
+      this.$emit('DownloadCurrent')
     },
     /**
      * 开始拖动水印
@@ -280,15 +291,26 @@ export default defineComponent({
       ctx.restore()
     },
     /**
+     * 导出当前预览为 PNG dataURL
+     * @returns dataURL，失败返回空字符串
+     */
+    ExportDataUrl(): string {
+      this.UpdateWatermark()
+      const canvas = this.GetCanvas()
+      if (!canvas) {
+        return ''
+      }
+      return canvas.toDataURL('image/png')
+    },
+    /**
      * 将当前预览结果写入图片项
      * @param img 图片项
      */
     ProcessImage(img: WatermarkImageItem): Promise<void> {
       return new Promise((resolve) => {
-        this.UpdateWatermark()
-        const canvas = this.GetCanvas()
-        if (canvas) {
-          img.processedData = canvas.toDataURL('image/png')
+        const dataUrl = this.ExportDataUrl()
+        if (dataUrl) {
+          img.processedData = dataUrl
         }
         resolve()
       })
@@ -298,10 +320,34 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .preview-section h3 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 1.05rem;
   color: #1f2a3d;
+}
+
+.download-current {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: #2e7d5a;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.download-current:hover {
+  background: #246548;
 }
 
 .preview-wrapper {

@@ -28,19 +28,28 @@
         </button>
         <button
           type="button"
+          class="action-btn success"
+          :disabled="!currentImage"
+          @click="HandleDownloadCurrent"
+        >
+          下载当前图片
+        </button>
+        <button
+          type="button"
           class="action-btn primary"
           :disabled="isProcessing"
           @click="HandleProcessAll"
         >
-          {{ isProcessing ? '处理中…' : '批量添加水印' }}
+          {{ isProcessing ? '处理中…' : processButtonLabel }}
         </button>
         <button
+          v-if="imageList.length > 1"
           type="button"
           class="action-btn success"
           :disabled="!hasProcessedImages"
           @click="HandleDownloadAll"
         >
-          打包下载
+          打包下载全部
         </button>
       </div>
 
@@ -50,6 +59,7 @@
           :image="currentImage"
           :settings="watermarkSettings"
           @UpdatePosition="HandleUpdateWatermarkPos"
+          @DownloadCurrent="HandleDownloadCurrent"
         />
 
         <WatermarkSettings
@@ -99,6 +109,7 @@ import type {
 
 type PreviewCanvasExpose = {
   UpdateWatermark: () => void
+  ExportDataUrl: () => string
   ProcessImage: (img: WatermarkImageItem) => Promise<void>
 }
 
@@ -145,6 +156,13 @@ export default defineComponent({
      */
     hasProcessedImages(): boolean {
       return this.imageList.some((img) => img.status === 'completed')
+    },
+    /**
+     * 批量处理按钮文案
+     * @returns 文案
+     */
+    processButtonLabel(): string {
+      return this.imageList.length > 1 ? '批量添加水印' : '应用水印'
     },
     /**
      * 汇总水印设置
@@ -246,6 +264,50 @@ export default defineComponent({
      */
     HandleUpdateWatermarkPos(pos: WatermarkPoint) {
       this.watermarkPos = pos
+    },
+    /**
+     * 构建下载文件名
+     * @param fileName 原始文件名
+     * @returns 水印后文件名
+     */
+    BuildDownloadName(fileName: string): string {
+      const base = fileName.replace(/\.[^.]+$/, '') || 'image'
+      return `watermarked_${base}.png`
+    },
+    /**
+     * 触发浏览器下载
+     * @param dataUrl PNG dataURL
+     * @param fileName 下载文件名
+     */
+    TriggerDownload(dataUrl: string, fileName: string) {
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = fileName
+      link.click()
+    },
+    /**
+     * 下载当前预览图（带水印）
+     */
+    HandleDownloadCurrent() {
+      if (!this.currentImage) {
+        return
+      }
+      const canvas = this.GetPreviewCanvas()
+      if (!canvas) {
+        return
+      }
+
+      const dataUrl = canvas.ExportDataUrl()
+      if (!dataUrl) {
+        return
+      }
+
+      this.currentImage.processedData = dataUrl
+      this.currentImage.status = 'completed'
+      this.TriggerDownload(
+        dataUrl,
+        this.BuildDownloadName(this.currentImage.file.name),
+      )
     },
     /**
      * 批量处理全部图片

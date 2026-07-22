@@ -98,6 +98,13 @@ src/
 
 ## 会话总结
 
+### 2026-07-22（水印单张下载）
+
+- **会话目的**：单张加水印时缺少下载入口。
+- **完成任务**：预览区与操作栏增加「下载当前图片」；多图才显示「打包下载全部」。
+- **关键决策**：下载直接导出当前预览 Canvas，无需先点批量处理。
+- **修改文件**：`src/views/watermark/index.vue`、`src/views/watermark/components/PreviewCanvas.vue`、`README.md`
+
 ### 2026-07-22（图片水印工具）
 
 - **会话目的**：参考 toolbox watermark 在本项目新增图片水印工具。
