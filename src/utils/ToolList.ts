@@ -36,6 +36,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'pixel-scaler',
+      name: '像素图缩放',
+      description: '最近邻插值无损放大像素图，避免普通放大模糊，适合拼豆素材预处理。',
+      path: '/pixel-scaler',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'compress',
       name: '图片压缩工具',
       description: '支持多图本地压缩，可调质量/缩放/宽高，结果可单下或打包 ZIP。',
