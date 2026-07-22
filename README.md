@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 工具列表首页：拼豆工具、图片压缩工具、图片水印工具等入口
+- 工具列表首页：拼豆、压缩、水印、格式转换等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -52,6 +52,7 @@ npm run dev
 | `/generator` | 拼豆图纸生成器 |
 | `/image-compress` | 图片压缩工具 |
 | `/watermark` | 图片水印工具 |
+| `/image-converter` | 图片格式转换 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -71,6 +72,7 @@ src/
     generator/index.ts
     imageCompress/index.ts
     watermark/index.ts
+    imageConverter/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
@@ -81,6 +83,7 @@ src/
     generator/index.vue   # 拼豆生成器页
     imageCompress/index.vue # 图片压缩页
     watermark/            # 图片水印工具
+    imageConverter/index.vue # 图片格式转换
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
@@ -89,6 +92,7 @@ src/
     Env.ts                # 环境变量读取
     ToolList.ts           # 首页工具列表配置
     ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
+    ImageConverter.ts     # 图片格式转换
     TextToPixels.ts
     DrawBeadPattern.ts
     MardColors.ts          # MARD 291 色卡
@@ -97,6 +101,20 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（图片格式转换）
+
+- **会话目的**：参考 toolbox image-converter 新增图片格式转换工具。
+- **完成任务**：
+  - 新增 `/image-converter`：多图上传，转 JPEG/PNG/WebP/GIF
+  - 单张直接下载，多张打包 ZIP；JPEG/WebP 可调质量
+  - 工具列表增加入口
+- **关键决策**：
+  - Canvas 转码；JPEG/GIF 先铺白底避免透明变黑
+  - 转换逻辑抽到 `ImageConverter.ts`
+- **修改文件**：
+  - 新增 `src/utils/ImageConverter.ts`、`src/views/imageConverter/index.vue`、`src/router/imageConverter/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-22（水印单张下载）
 

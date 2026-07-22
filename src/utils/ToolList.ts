@@ -44,6 +44,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'converter',
+      name: '图片格式转换',
+      description: '多图转 JPEG / PNG / WebP / GIF，单张直下，多张打包 ZIP。',
+      path: '/image-converter',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',
