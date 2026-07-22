@@ -52,6 +52,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'unit',
+      name: '单位转换',
+      description: '长度、重量、面积、体积、温度换算，支持交换单位与转换记录。',
+      path: '/unit-converter',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',

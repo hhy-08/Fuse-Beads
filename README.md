@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 工具列表首页：拼豆、压缩、水印、格式转换等入口
+- 工具列表首页：拼豆、压缩、水印、格式转换、单位转换等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -53,6 +53,7 @@ npm run dev
 | `/image-compress` | 图片压缩工具 |
 | `/watermark` | 图片水印工具 |
 | `/image-converter` | 图片格式转换 |
+| `/unit-converter` | 单位转换 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -73,6 +74,7 @@ src/
     imageCompress/index.ts
     watermark/index.ts
     imageConverter/index.ts
+    unitConverter/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
@@ -84,6 +86,7 @@ src/
     imageCompress/index.vue # 图片压缩页
     watermark/            # 图片水印工具
     imageConverter/index.vue # 图片格式转换
+    unitConverter/index.vue  # 单位转换
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
@@ -93,6 +96,7 @@ src/
     ToolList.ts           # 首页工具列表配置
     ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
     ImageConverter.ts     # 图片格式转换
+    UnitConverter.ts      # 单位换算
     TextToPixels.ts
     DrawBeadPattern.ts
     MardColors.ts          # MARD 291 色卡
@@ -101,6 +105,20 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（单位转换工具）
+
+- **会话目的**：参考 toolbox unit-converter 新增单位转换工具。
+- **完成任务**：
+  - 新增 `/unit-converter`：长度/重量/面积/体积/温度
+  - 支持单位交换、换算比率说明、防抖历史记录
+  - 工具列表增加入口
+- **关键决策**：
+  - 与参考一致使用自建换算系数（不引入 convert-units）
+  - 修正平方千米系数：1 km² = 1,000,000 m²
+- **修改文件**：
+  - 新增 `src/utils/UnitConverter.ts`、`src/views/unitConverter/index.vue`、`src/router/unitConverter/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-22（水印旋转支持负值）
 
