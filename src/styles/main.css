@@ -1,0 +1,36 @@
+/**
+ * 全局基础样式
+ * 定义页面背景、字体与通用重置
+ */
+:root {
+  color: #1f2a3d;
+  background:
+    radial-gradient(circle at top left, rgba(255, 214, 140, 0.28), transparent 28%),
+    radial-gradient(circle at top right, rgba(120, 168, 255, 0.2), transparent 26%),
+    linear-gradient(180deg, #eef3fb 0%, #f6f3ee 48%, #f8f5f0 100%);
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+}
+
+button,
+input {
+  font: inherit;
+}
