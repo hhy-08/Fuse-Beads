@@ -36,6 +36,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'watermark',
+      name: '图片水印工具',
+      description: '多图批量加水印，支持九宫格位置、平铺、旋转、拖动与打包下载。',
+      path: '/watermark',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',

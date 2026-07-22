@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 工具列表首页：拼豆工具、图片压缩工具等入口
+- 工具列表首页：拼豆工具、图片压缩工具、图片水印工具等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -51,6 +51,7 @@ npm run dev
 | `/` | 工具列表（默认首页） |
 | `/generator` | 拼豆图纸生成器 |
 | `/image-compress` | 图片压缩工具 |
+| `/watermark` | 图片水印工具 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -69,6 +70,7 @@ src/
     tools/index.ts
     generator/index.ts
     imageCompress/index.ts
+    watermark/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
@@ -78,6 +80,7 @@ src/
     tools/index.vue       # 工具列表首页
     generator/index.vue   # 拼豆生成器页
     imageCompress/index.vue # 图片压缩页
+    watermark/            # 图片水印工具
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
@@ -94,6 +97,20 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（图片水印工具）
+
+- **会话目的**：参考 toolbox watermark 在本项目新增图片水印工具。
+- **完成任务**：
+  - 新增 `/watermark`：多图上传、九宫格位置、平铺、旋转、透明度、自由拖动
+  - 支持批量加水印与 ZIP 打包下载
+  - 工具列表增加「图片水印工具」入口
+- **关键决策**：
+  - 沿用 Options API + 本站视觉，不引入 Element Plus
+  - 预设位置切换时关闭自由拖动，避免坐标冲突
+- **修改文件**：
+  - 新增 `src/views/watermark/**`、`src/router/watermark/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-22（图片压缩对齐 toolbox）
 
