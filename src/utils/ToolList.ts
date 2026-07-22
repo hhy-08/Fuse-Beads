@@ -68,6 +68,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'qrcode',
+      name: '二维码生成',
+      description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
+      path: '/qrcode',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',
