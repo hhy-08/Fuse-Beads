@@ -60,6 +60,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'file',
+      name: '文件转换',
+      description: '纯前端转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
+      path: '/file-converter',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',

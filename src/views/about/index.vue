@@ -20,6 +20,7 @@
         <li>图片压缩：多图压缩、质量与尺寸调节、ZIP 打包</li>
         <li>图片水印：批量加水印，支持平铺、旋转与拖动</li>
         <li>图片格式转换：JPEG / PNG / WebP / GIF 互转</li>
+        <li>文件转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等纯前端处理</li>
         <li>单位转换：长度、重量、面积、体积、温度换算</li>
       </ul>
     </section>

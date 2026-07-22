@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 工具列表首页：拼豆、压缩、水印、格式转换、单位转换等入口
+- 工具列表首页：拼豆、压缩、水印、图片/文件转换、单位转换等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -54,6 +54,7 @@ npm run dev
 | `/watermark` | 图片水印工具 |
 | `/image-converter` | 图片格式转换 |
 | `/unit-converter` | 单位转换 |
+| `/file-converter` | 文件转换（纯前端） |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -75,6 +76,7 @@ src/
     watermark/index.ts
     imageConverter/index.ts
     unitConverter/index.ts
+    fileConverter/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
@@ -87,6 +89,7 @@ src/
     watermark/            # 图片水印工具
     imageConverter/index.vue # 图片格式转换
     unitConverter/index.vue  # 单位转换
+    fileConverter/index.vue  # 文件转换
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
@@ -98,6 +101,7 @@ src/
     ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
     ImageConverter.ts     # 图片格式转换
     UnitConverter.ts      # 单位换算
+    FileConverter.ts      # 文件转换（PDF/DOCX/XLSX 等）
     TextToPixels.ts
     DrawBeadPattern.ts
     MardColors.ts          # MARD 291 色卡
@@ -106,6 +110,25 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（TXT 转 PDF 中文乱码修复）
+
+- **会话目的**：TXT→PDF 中文乱码。
+- **完成任务**：改用 Canvas + 浏览器中文字体排版再写入 PDF；文本读取增加 GBK 回退。
+- **关键决策**：jsPDF 默认字体不含 CJK，直接 `text()` 会乱码，故走「画布渲染 → 图片嵌入 PDF」。
+- **修改文件**：`src/utils/FileConverter.ts`、`README.md`
+
+### 2026-07-22（文件转换纯前端）
+
+- **会话目的**：参考 toolbox file-converter，但改为纯前端实现，并支持 PDF→PNG/JPG。
+- **完成任务**：
+  - 新增 `/file-converter`：PDF→PNG/JPG/TXT，TXT→PDF，DOCX→TXT/HTML，XLSX→CSV/JSON 等
+  - 多页 PDF 出图自动 ZIP；明确排除 Word/Excel↔PDF 等需后端类型
+  - 接入 pdfjs-dist / jspdf / mammoth / xlsx
+- **关键决策**：只保留浏览器可可靠完成的转换，避免假依赖后端的入口。
+- **修改文件**：
+  - 新增 `src/utils/FileConverter.ts`、`src/views/fileConverter/index.vue`、`src/router/fileConverter/index.ts`
+  - 更新 `ToolList.ts`、`Brand.ts`、`about`、`README.md`、`package.json`
 
 ### 2026-07-22（拼豆页顶部样式统一）
 
