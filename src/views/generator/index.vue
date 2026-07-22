@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <p class="brand">Fuse Beads</p>
         <h1>{{ appTitle }}</h1>
-        <p class="subtitle">输入文字，一键生成可打印的拼豆像素图纸</p>
+        <p class="subtitle">文字或图片一键生成可打印的拼豆像素图纸</p>
       </div>
       <nav class="hero-nav">
         <router-link to="/">生成器</router-link>
@@ -14,6 +14,7 @@
 
     <main class="workspace">
       <ControlPanel
+        :sourceMode="sourceMode"
         :text="text"
         :fontId="fontId"
         :letterSpacing="letterSpacing"
@@ -26,6 +27,11 @@
         :strokeWidth="strokeWidth"
         :showGrid="showGrid"
         :showColorCode="showColorCode"
+        :imageDataUrl="imageDataUrl"
+        :imageMaxWidth="imageMaxWidth"
+        :imageMaxHeight="imageMaxHeight"
+        :imageAlphaThreshold="imageAlphaThreshold"
+        @UpdateSourceMode="HandleUpdateSourceMode"
         @UpdateText="HandleUpdateText"
         @UpdateFontId="HandleUpdateFontId"
         @UpdateLetterSpacing="HandleUpdateLetterSpacing"
@@ -42,11 +48,16 @@
         @UpdateStrokeWidth="HandleUpdateStrokeWidth"
         @UpdateShowGrid="HandleUpdateShowGrid"
         @UpdateShowColorCode="HandleUpdateShowColorCode"
+        @UpdateImageDataUrl="HandleUpdateImageDataUrl"
+        @UpdateImageMaxWidth="HandleUpdateImageMaxWidth"
+        @UpdateImageMaxHeight="HandleUpdateImageMaxHeight"
+        @UpdateImageAlphaThreshold="HandleUpdateImageAlphaThreshold"
         @ExportImage="HandleExportImage"
       />
 
       <BeadCanvas
         ref="beadCanvas"
+        :sourceMode="sourceMode"
         :text="text"
         :fontId="fontId"
         :letterSpacing="letterSpacing"
@@ -60,6 +71,10 @@
         :strokeWidth="strokeWidth"
         :showGrid="showGrid"
         :showColorCode="showColorCode"
+        :imageDataUrl="imageDataUrl"
+        :imageMaxWidth="imageMaxWidth"
+        :imageMaxHeight="imageMaxHeight"
+        :imageAlphaThreshold="imageAlphaThreshold"
       />
     </main>
   </div>
@@ -85,6 +100,7 @@ export default defineComponent({
   computed: {
     ...mapGetters([
       'appTitle',
+      'sourceMode',
       'text',
       'fontId',
       'fontSize',
@@ -99,6 +115,10 @@ export default defineComponent({
       'strokeWidth',
       'showGrid',
       'showColorCode',
+      'imageDataUrl',
+      'imageMaxWidth',
+      'imageMaxHeight',
+      'imageAlphaThreshold',
     ]),
   },
   /**
@@ -117,6 +137,7 @@ export default defineComponent({
   },
   methods: {
     ...mapMutations([
+      'SETSOURCEMODE',
       'SETTEXT',
       'SETFONTID',
       'SETLETTERSPACING',
@@ -133,13 +154,52 @@ export default defineComponent({
       'SETSTROKEWIDTH',
       'SETSHOWGRID',
       'SETSHOWCOLORCODE',
+      'SETIMAGEDATAURL',
+      'SETIMAGEMAXWIDTH',
+      'SETIMAGEMAXHEIGHT',
+      'SETIMAGEALPHATHRESHOLD',
     ]),
+    /**
+     * 更新生成模式
+     * @param value text 或 image
+     */
+    HandleUpdateSourceMode(value: 'text' | 'image') {
+      this.SETSOURCEMODE(value)
+    },
     /**
      * 更新输入文字
      * @param value 新文字
      */
     HandleUpdateText(value: string) {
       this.SETTEXT(value)
+    },
+    /**
+     * 更新上传图片
+     * @param value dataURL
+     */
+    HandleUpdateImageDataUrl(value: string) {
+      this.SETIMAGEDATAURL(value)
+    },
+    /**
+     * 更新图片最大宽度
+     * @param value 豆数
+     */
+    HandleUpdateImageMaxWidth(value: number) {
+      this.SETIMAGEMAXWIDTH(value)
+    },
+    /**
+     * 更新图片最大高度
+     * @param value 豆数
+     */
+    HandleUpdateImageMaxHeight(value: number) {
+      this.SETIMAGEMAXHEIGHT(value)
+    },
+    /**
+     * 更新图片透明抠图阈值
+     * @param value Alpha 阈值
+     */
+    HandleUpdateImageAlphaThreshold(value: number) {
+      this.SETIMAGEALPHATHRESHOLD(value)
     },
     /**
      * 更新采样字体

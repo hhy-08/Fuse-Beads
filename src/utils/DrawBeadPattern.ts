@@ -42,7 +42,7 @@ export function DrawBeadPattern(
     ctx.font = '16px "Noto Sans SC", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('请输入文字生成拼豆图案', canvas.width / 2, canvas.height / 2)
+    ctx.fillText('请输入文字或上传图片生成拼豆图案', canvas.width / 2, canvas.height / 2)
     return
   }
 

@@ -20,7 +20,10 @@ declare module '@vue/runtime-core' {
  * 缓存过滤配置
  * false: 不过滤（全持久化）；[]: 全部过滤；[key]: 过滤指定字段
  */
-const catchScoped: Record<string, false | string[]> = {}
+const catchScoped: Record<string, false | string[]> = {
+  // 图片 dataURL 可能很大，不写入 sessionStorage
+  generator: ['imageDataUrl'],
+}
 
 export default createStore({
   state,

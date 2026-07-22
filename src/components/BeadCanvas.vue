@@ -68,6 +68,10 @@ import {
   type BeadPatternGrid,
   type CharStyle,
 } from '../utils/TextToPixels'
+import {
+  ConvertImageToPixels,
+  LoadImageFromDataUrl,
+} from '../utils/ImageToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
 import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
 
@@ -78,6 +82,7 @@ const DEFAULTZOOM = 1
 export default defineComponent({
   name: 'BeadCanvas',
   props: {
+    sourceMode: { type: String as PropType<'text' | 'image'>, required: true },
     text: { type: String, required: true },
     fontId: { type: String, required: true },
     letterSpacing: { type: Number, required: true },
@@ -91,6 +96,10 @@ export default defineComponent({
     strokeWidth: { type: Number, required: true },
     showGrid: { type: Boolean, required: true },
     showColorCode: { type: Boolean, required: true },
+    imageDataUrl: { type: String, required: true },
+    imageMaxWidth: { type: Number, required: true },
+    imageMaxHeight: { type: Number, required: true },
+    imageAlphaThreshold: { type: Number, required: true },
   },
   data() {
     return {
@@ -138,6 +147,9 @@ export default defineComponent({
     window.removeEventListener('resize', this.HandleWindowResize)
   },
   watch: {
+    sourceMode() {
+      this.ScheduleRender()
+    },
     text() {
       this.ScheduleRender()
     },
@@ -178,6 +190,18 @@ export default defineComponent({
       this.ScheduleRender()
     },
     showColorCode() {
+      this.ScheduleRender()
+    },
+    imageDataUrl() {
+      this.ScheduleRender()
+    },
+    imageMaxWidth() {
+      this.ScheduleRender()
+    },
+    imageMaxHeight() {
+      this.ScheduleRender()
+    },
+    imageAlphaThreshold() {
       this.ScheduleRender()
     },
   },
@@ -266,7 +290,7 @@ export default defineComponent({
       )
     },
     /**
-     * 将文字按逐字样式转换为像素网格并绘制到 Canvas
+     * 将文字或图片转换为像素网格并绘制到 Canvas
      */
     async RenderPattern() {
       const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
@@ -277,22 +301,14 @@ export default defineComponent({
       const token = this.renderToken + 1
       this.renderToken = token
 
-      const fontOption = FindFontOptionById(this.fontId)
-      await EnsureFontLoaded(fontOption.family, this.GetMaxFontSize())
+      let coloredGrid =
+        this.sourceMode === 'image'
+          ? await this.BuildImageColoredGrid()
+          : await this.BuildTextColoredGrid()
 
       if (token !== this.renderToken) {
         return
       }
-
-      const coloredGrid = ConvertStyledTextToPixels({
-        text: this.text,
-        fontFamily: fontOption.family,
-        threshold: this.threshold,
-        letterSpacing: this.letterSpacing,
-        charStyles: this.charStyles,
-        defaultColor: this.beadColor,
-        defaultFontSize: this.GetMaxFontSize(),
-      })
 
       this.patternGrid =
         this.showStroke && this.strokeWidth > 0
@@ -321,6 +337,43 @@ export default defineComponent({
       this.naturalHeight = canvas.height
     },
     /**
+     * 构建文字模式彩色网格
+     * @returns 彩色像素网格
+     */
+    async BuildTextColoredGrid() {
+      const fontOption = FindFontOptionById(this.fontId)
+      await EnsureFontLoaded(fontOption.family, this.GetMaxFontSize())
+      return ConvertStyledTextToPixels({
+        text: this.text,
+        fontFamily: fontOption.family,
+        threshold: this.threshold,
+        letterSpacing: this.letterSpacing,
+        charStyles: this.charStyles,
+        defaultColor: this.beadColor,
+        defaultFontSize: this.GetMaxFontSize(),
+      })
+    },
+    /**
+     * 构建图片模式彩色网格
+     * @returns 彩色像素网格
+     */
+    async BuildImageColoredGrid() {
+      if (!this.imageDataUrl) {
+        return { width: 0, height: 0, cells: [] }
+      }
+      try {
+        const image = await LoadImageFromDataUrl(this.imageDataUrl)
+        return ConvertImageToPixels({
+          source: image,
+          maxWidth: this.imageMaxWidth,
+          maxHeight: this.imageMaxHeight,
+          alphaThreshold: this.imageAlphaThreshold,
+        })
+      } catch {
+        return { width: 0, height: 0, cells: [] }
+      }
+    },
+    /**
      * 导出当前 Canvas 为 PNG 图纸文件（按实际格子分辨率导出）
      */
     ExportImage() {
@@ -329,7 +382,11 @@ export default defineComponent({
         return
       }
 
-      const safeName = (this.text.trim() || 'bead-pattern').replace(/\s+/g, '-')
+      const baseName =
+        this.sourceMode === 'image'
+          ? 'image-bead-pattern'
+          : this.text.trim() || 'bead-pattern'
+      const safeName = baseName.replace(/\s+/g, '-')
       ExportCanvasAsPng(canvas, `${safeName}-拼豆图纸.png`)
     },
   },

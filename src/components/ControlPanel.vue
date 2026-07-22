@@ -1,6 +1,28 @@
 <template>
   <aside class="panel">
     <section class="section">
+      <h2>生成模式</h2>
+      <div class="mode-row">
+        <button
+          type="button"
+          class="mode-btn"
+          :class="{ active: sourceMode === 'text' }"
+          @click="EmitSourceMode('text')"
+        >
+          文字转拼豆
+        </button>
+        <button
+          type="button"
+          class="mode-btn"
+          :class="{ active: sourceMode === 'image' }"
+          @click="EmitSourceMode('image')"
+        >
+          图片转拼豆
+        </button>
+      </div>
+    </section>
+
+    <section v-if="sourceMode === 'text'" class="section">
       <h2>文字内容</h2>
       <label class="field">
         <span>输入文字</span>
@@ -212,6 +234,64 @@
       </div>
     </section>
 
+    <section v-else class="section">
+      <h2>图片内容</h2>
+      <label class="upload-box">
+        <input
+          class="file-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          @change="EmitImageFile"
+        />
+        <span v-if="!imageDataUrl">点击上传图片（PNG / JPG / WEBP）</span>
+        <span v-else>重新选择图片</span>
+      </label>
+
+      <div v-if="imageDataUrl" class="image-preview-wrap">
+        <img class="image-preview" :src="imageDataUrl" alt="上传预览" />
+        <button type="button" class="ghost-btn" @click="EmitClearImage">
+          清除图片
+        </button>
+      </div>
+
+      <label class="field">
+        <span>最大宽度 {{ imageMaxWidth }} 豆</span>
+        <input
+          type="range"
+          min="8"
+          max="128"
+          :value="imageMaxWidth"
+          @input="EmitImageMaxWidth"
+        />
+      </label>
+
+      <label class="field">
+        <span>最大高度 {{ imageMaxHeight }} 豆</span>
+        <input
+          type="range"
+          min="8"
+          max="128"
+          :value="imageMaxHeight"
+          @input="EmitImageMaxHeight"
+        />
+      </label>
+
+      <label class="field">
+        <span>透明抠图阈值 {{ imageAlphaThreshold }}</span>
+        <input
+          type="range"
+          min="0"
+          max="250"
+          :value="imageAlphaThreshold"
+          @input="EmitImageAlphaThreshold"
+        />
+      </label>
+
+      <p class="empty-tip">
+        图片会按比例缩放到最大宽高内，并自动匹配最近的 MARD 色号。
+      </p>
+    </section>
+
     <section class="section">
       <h2>珠子外观</h2>
       <label class="field">
@@ -334,6 +414,7 @@ import {
 export default defineComponent({
   name: 'ControlPanel',
   props: {
+    sourceMode: { type: String as PropType<'text' | 'image'>, required: true },
     text: { type: String, required: true },
     fontId: { type: String, required: true },
     letterSpacing: { type: Number, required: true },
@@ -346,8 +427,13 @@ export default defineComponent({
     strokeWidth: { type: Number, required: true },
     showGrid: { type: Boolean, required: true },
     showColorCode: { type: Boolean, required: true },
+    imageDataUrl: { type: String, required: true },
+    imageMaxWidth: { type: Number, required: true },
+    imageMaxHeight: { type: Number, required: true },
+    imageAlphaThreshold: { type: Number, required: true },
   },
   emits: [
+    'UpdateSourceMode',
     'UpdateText',
     'UpdateFontId',
     'UpdateLetterSpacing',
@@ -364,6 +450,10 @@ export default defineComponent({
     'UpdateStrokeWidth',
     'UpdateShowGrid',
     'UpdateShowColorCode',
+    'UpdateImageDataUrl',
+    'UpdateImageMaxWidth',
+    'UpdateImageMaxHeight',
+    'UpdateImageAlphaThreshold',
     'ExportImage',
   ],
   data() {
@@ -565,12 +655,70 @@ export default defineComponent({
       this.strokeSeries = series
     },
     /**
+     * 派发模式切换事件
+     * @param mode 文字或图片
+     */
+    EmitSourceMode(mode: 'text' | 'image') {
+      this.$emit('UpdateSourceMode', mode)
+    },
+    /**
      * 派发文字变更事件
      * @param event 输入事件
      */
     EmitText(event: Event) {
       const target = event.target as HTMLInputElement
       this.$emit('UpdateText', target.value)
+    },
+    /**
+     * 读取上传图片并转为 dataURL
+     * @param event 文件选择事件
+     */
+    EmitImageFile(event: Event) {
+      const target = event.target as HTMLInputElement
+      const file = target.files && target.files[0]
+      if (!file) {
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : ''
+        this.$emit('UpdateImageDataUrl', result)
+      }
+      reader.readAsDataURL(file)
+      target.value = ''
+    },
+    /**
+     * 清除已上传图片
+     */
+    EmitClearImage() {
+      this.$emit('UpdateImageDataUrl', '')
+    },
+    /**
+     * 派发图片最大宽度变更
+     * @param event 输入事件
+     */
+    EmitImageMaxWidth(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateImageMaxWidth', Number(target.value))
+    },
+    /**
+     * 派发图片最大高度变更
+     * @param event 输入事件
+     */
+    EmitImageMaxHeight(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateImageMaxHeight', Number(target.value))
+    },
+    /**
+     * 派发透明抠图阈值变更
+     * @param event 输入事件
+     */
+    EmitImageAlphaThreshold(event: Event) {
+      const target = event.target as HTMLInputElement
+      this.$emit('UpdateImageAlphaThreshold', Number(target.value))
     },
     /**
      * 派发字体变更事件
@@ -772,6 +920,67 @@ export default defineComponent({
   font-size: 0.95rem;
   color: #24324d;
   letter-spacing: 0.04em;
+}
+
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mode-btn {
+  height: 40px;
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  background: #fff;
+  color: #31415f;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.mode-btn.active,
+.mode-btn:hover {
+  border-color: #3f6fe8;
+  color: #3f6fe8;
+  background: rgba(63, 111, 232, 0.08);
+}
+
+.upload-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 16px;
+  border: 1px dashed #b7c3d8;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #4b5872;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e4eaf3;
 }
 
 .field {

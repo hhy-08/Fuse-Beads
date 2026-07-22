@@ -10,6 +10,7 @@ import {
 } from '@/utils/TextToPixels'
 
 export type GeneratorState = {
+  sourceMode: 'text' | 'image'
   text: string
   fontId: string
   fontSize: number
@@ -24,6 +25,10 @@ export type GeneratorState = {
   strokeWidth: number
   showGrid: boolean
   showColorCode: boolean
+  imageDataUrl: string
+  imageMaxWidth: number
+  imageMaxHeight: number
+  imageAlphaThreshold: number
 }
 
 const DEFAULTCOLOR = '#0F54C0'
@@ -33,6 +38,7 @@ const DEFAULTCHARSTYLE = CreateDefaultCharStyle(DEFAULTCOLOR, DEFAULTFONTSIZE)
 const generator = {
   name: 'generator',
   state: {
+    sourceMode: 'text' as const,
     text: '拼豆',
     fontId: 'noto-sans-sc',
     fontSize: DEFAULTFONTSIZE,
@@ -50,8 +56,18 @@ const generator = {
     strokeWidth: 1,
     showGrid: true,
     showColorCode: true,
+    imageDataUrl: '',
+    imageMaxWidth: 48,
+    imageMaxHeight: 64,
+    imageAlphaThreshold: 40,
   } as GeneratorState,
   getters: {
+    /**
+     * 获取输入来源模式
+     * @param state 模块状态
+     * @returns text 或 image
+     */
+    sourceMode: (state: GeneratorState) => state.sourceMode,
     /**
      * 获取输入文字
      * @param state 模块状态
@@ -136,8 +152,40 @@ const generator = {
      * @returns 是否显示色值
      */
     showColorCode: (state: GeneratorState) => state.showColorCode,
+    /**
+     * 获取图片 dataURL
+     * @param state 模块状态
+     * @returns dataURL
+     */
+    imageDataUrl: (state: GeneratorState) => state.imageDataUrl,
+    /**
+     * 获取图片最大宽度（豆）
+     * @param state 模块状态
+     * @returns 最大宽度
+     */
+    imageMaxWidth: (state: GeneratorState) => state.imageMaxWidth,
+    /**
+     * 获取图片最大高度（豆）
+     * @param state 模块状态
+     * @returns 最大高度
+     */
+    imageMaxHeight: (state: GeneratorState) => state.imageMaxHeight,
+    /**
+     * 获取图片透明阈值
+     * @param state 模块状态
+     * @returns Alpha 阈值
+     */
+    imageAlphaThreshold: (state: GeneratorState) => state.imageAlphaThreshold,
   },
   mutations: {
+    /**
+     * 设置输入来源模式
+     * @param state 模块状态
+     * @param value text 或 image
+     */
+    SETSOURCEMODE(state: GeneratorState, value: 'text' | 'image') {
+      state.sourceMode = value
+    },
     /**
      * 设置输入文字，并同步逐字样式长度
      * @param state 模块状态
@@ -323,6 +371,38 @@ const generator = {
     SETSHOWCOLORCODE(state: GeneratorState, value: boolean) {
       state.showColorCode = value
     },
+    /**
+     * 设置上传图片 dataURL
+     * @param state 模块状态
+     * @param value dataURL，空串表示清除
+     */
+    SETIMAGEDATAURL(state: GeneratorState, value: string) {
+      state.imageDataUrl = value
+    },
+    /**
+     * 设置图片最大宽度（豆）
+     * @param state 模块状态
+     * @param value 宽度
+     */
+    SETIMAGEMAXWIDTH(state: GeneratorState, value: number) {
+      state.imageMaxWidth = Math.min(128, Math.max(8, Math.round(value)))
+    },
+    /**
+     * 设置图片最大高度（豆）
+     * @param state 模块状态
+     * @param value 高度
+     */
+    SETIMAGEMAXHEIGHT(state: GeneratorState, value: number) {
+      state.imageMaxHeight = Math.min(128, Math.max(8, Math.round(value)))
+    },
+    /**
+     * 设置图片透明阈值
+     * @param state 模块状态
+     * @param value Alpha 阈值
+     */
+    SETIMAGEALPHATHRESHOLD(state: GeneratorState, value: number) {
+      state.imageAlphaThreshold = Math.min(255, Math.max(0, Math.round(value)))
+    },
   },
   actions: {
     /**
@@ -334,6 +414,7 @@ const generator = {
     }: {
       commit: (type: string, payload?: unknown) => void
     }) {
+      commit('SETSOURCEMODE', 'text')
       commit('SETTEXT', '拼豆')
       commit('SETFONTID', 'noto-sans-sc')
       commit('SETFONTSIZE', DEFAULTFONTSIZE)
@@ -351,6 +432,10 @@ const generator = {
       commit('SETSTROKEWIDTH', 1)
       commit('SETSHOWGRID', true)
       commit('SETSHOWCOLORCODE', true)
+      commit('SETIMAGEDATAURL', '')
+      commit('SETIMAGEMAXWIDTH', 48)
+      commit('SETIMAGEMAXHEIGHT', 64)
+      commit('SETIMAGEALPHATHRESHOLD', 40)
     },
   },
 }
