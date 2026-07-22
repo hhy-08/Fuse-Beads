@@ -7,10 +7,11 @@ import {
   CreateDefaultCharStyle,
   SyncCharStyles,
   type CharStyle,
+  type ColoredPixelGrid,
 } from '@/utils/TextToPixels'
 
 export type GeneratorState = {
-  sourceMode: 'text' | 'image'
+  sourceMode: 'text' | 'image' | 'pixel'
   text: string
   fontId: string
   fontSize: number
@@ -30,6 +31,7 @@ export type GeneratorState = {
   imageMaxHeight: number
   imageAlphaThreshold: number
   imageClarity: number
+  importedPixelGrid: ColoredPixelGrid | null
 }
 
 const DEFAULTCOLOR = '#0F54C0'
@@ -62,6 +64,7 @@ const generator = {
     imageMaxHeight: 64,
     imageAlphaThreshold: 40,
     imageClarity: 6,
+    importedPixelGrid: null,
   } as GeneratorState,
   getters: {
     /**
@@ -184,15 +187,24 @@ const generator = {
      * @returns 清晰度
      */
     imageClarity: (state: GeneratorState) => state.imageClarity,
+    /**
+     * 获取像素画布导入的网格
+     * @param state 模块状态
+     * @returns 彩色像素网格或 null
+     */
+    importedPixelGrid: (state: GeneratorState) => state.importedPixelGrid,
   },
   mutations: {
     /**
      * 设置输入来源模式
      * @param state 模块状态
-     * @param value text 或 image
+     * @param value text / image / pixel
      */
-    SETSOURCEMODE(state: GeneratorState, value: 'text' | 'image') {
+    SETSOURCEMODE(state: GeneratorState, value: 'text' | 'image' | 'pixel') {
       state.sourceMode = value
+      if (value !== 'pixel') {
+        state.importedPixelGrid = null
+      }
     },
     /**
      * 设置输入文字，并同步逐字样式长度
@@ -419,6 +431,20 @@ const generator = {
     SETIMAGECLARITY(state: GeneratorState, value: number) {
       state.imageClarity = Math.min(10, Math.max(1, Math.round(value)))
     },
+    /**
+     * 设置像素画布导入网格
+     * @param state 模块状态
+     * @param value 网格或 null
+     */
+    SETIMPORTEDPIXELGRID(
+      state: GeneratorState,
+      value: ColoredPixelGrid | null,
+    ) {
+      state.importedPixelGrid = value
+      if (value) {
+        state.sourceMode = 'pixel'
+      }
+    },
   },
   actions: {
     /**
@@ -453,6 +479,7 @@ const generator = {
       commit('SETIMAGEMAXHEIGHT', 64)
       commit('SETIMAGEALPHATHRESHOLD', 40)
       commit('SETIMAGECLARITY', 6)
+      commit('SETIMPORTEDPIXELGRID', null)
     },
   },
 }

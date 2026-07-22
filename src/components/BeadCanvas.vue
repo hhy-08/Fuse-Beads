@@ -67,6 +67,7 @@ import {
   CountPatternBeads,
   type BeadPatternGrid,
   type CharStyle,
+  type ColoredPixelGrid,
 } from '../utils/TextToPixels'
 import {
   ConvertImageToPixels,
@@ -82,7 +83,7 @@ const DEFAULTZOOM = 1
 export default defineComponent({
   name: 'BeadCanvas',
   props: {
-    sourceMode: { type: String as PropType<'text' | 'image'>, required: true },
+    sourceMode: { type: String as PropType<'text' | 'image' | 'pixel'>, required: true },
     text: { type: String, required: true },
     fontId: { type: String, required: true },
     letterSpacing: { type: Number, required: true },
@@ -101,6 +102,10 @@ export default defineComponent({
     imageMaxHeight: { type: Number, required: true },
     imageAlphaThreshold: { type: Number, required: true },
     imageClarity: { type: Number, required: true },
+    importedPixelGrid: {
+      type: Object as PropType<ColoredPixelGrid | null>,
+      default: null,
+    },
   },
   data() {
     return {
@@ -208,6 +213,12 @@ export default defineComponent({
     imageClarity() {
       this.ScheduleRender()
     },
+    importedPixelGrid: {
+      deep: true,
+      handler() {
+        this.ScheduleRender()
+      },
+    },
   },
   methods: {
     /**
@@ -305,10 +316,18 @@ export default defineComponent({
       const token = this.renderToken + 1
       this.renderToken = token
 
-      let coloredGrid =
-        this.sourceMode === 'image'
-          ? await this.BuildImageColoredGrid()
-          : await this.BuildTextColoredGrid()
+      let coloredGrid: ColoredPixelGrid
+      if (this.sourceMode === 'pixel' && this.importedPixelGrid) {
+        coloredGrid = {
+          width: this.importedPixelGrid.width,
+          height: this.importedPixelGrid.height,
+          cells: this.importedPixelGrid.cells.map((row) => row.slice()),
+        }
+      } else if (this.sourceMode === 'image') {
+        coloredGrid = await this.BuildImageColoredGrid()
+      } else {
+        coloredGrid = await this.BuildTextColoredGrid()
+      }
 
       if (token !== this.renderToken) {
         return

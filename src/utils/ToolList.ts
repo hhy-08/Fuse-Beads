@@ -28,6 +28,14 @@ export function GetToolList(): ToolItem[] {
       badge: '可用',
     },
     {
+      id: 'pixel',
+      name: '像素画布',
+      description: '自由手绘像素画，支持橡皮、取色、图层、网格，可导出像素图 / 拼豆图纸并对接拼豆生成器。',
+      path: '/pixel-editor',
+      available: true,
+      badge: '可用',
+    },
+    {
       id: 'compress',
       name: '图片压缩工具',
       description: '支持多图本地压缩，可调质量/缩放/宽高，结果可单下或打包 ZIP。',

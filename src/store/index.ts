@@ -22,7 +22,7 @@ declare module '@vue/runtime-core' {
  */
 const catchScoped: Record<string, false | string[]> = {
   // 图片 dataURL 可能很大，不写入 sessionStorage
-  generator: ['imageDataUrl'],
+  generator: ['imageDataUrl', 'importedPixelGrid'],
 }
 
 export default createStore({

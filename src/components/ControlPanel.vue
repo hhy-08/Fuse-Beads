@@ -19,7 +19,28 @@
         >
           图片转拼豆
         </button>
+        <button
+          type="button"
+          class="mode-btn"
+          :class="{ active: sourceMode === 'pixel' }"
+          :disabled="!importedPixelGrid"
+          @click="EmitSourceMode('pixel')"
+        >
+          像素画布
+        </button>
       </div>
+    </section>
+
+    <section v-if="sourceMode === 'pixel'" class="section">
+      <h2>像素画布</h2>
+      <p class="hint">
+        当前图案来自像素画布编辑器
+        <template v-if="importedPixelGrid">
+          （{{ importedPixelGrid.width }} × {{ importedPixelGrid.height }}）
+        </template>
+        ，可继续调整图纸样式后导出。
+      </p>
+      <router-link class="link-btn" to="/pixel-editor">返回像素画布</router-link>
     </section>
 
     <section v-if="sourceMode === 'text'" class="section">
@@ -234,7 +255,7 @@
       </div>
     </section>
 
-    <section v-else class="section">
+    <section v-else-if="sourceMode === 'image'" class="section">
       <h2>图片内容</h2>
       <label class="upload-box">
         <input
@@ -421,12 +442,16 @@ import {
   CHARALIGNOPTIONS,
   type CharStyle,
   type CharVerticalAlign,
+  type ColoredPixelGrid,
 } from '@/utils/TextToPixels'
 
 export default defineComponent({
   name: 'ControlPanel',
   props: {
-    sourceMode: { type: String as PropType<'text' | 'image'>, required: true },
+    sourceMode: {
+      type: String as PropType<'text' | 'image' | 'pixel'>,
+      required: true,
+    },
     text: { type: String, required: true },
     fontId: { type: String, required: true },
     letterSpacing: { type: Number, required: true },
@@ -444,6 +469,10 @@ export default defineComponent({
     imageMaxHeight: { type: Number, required: true },
     imageAlphaThreshold: { type: Number, required: true },
     imageClarity: { type: Number, required: true },
+    importedPixelGrid: {
+      type: Object as PropType<ColoredPixelGrid | null>,
+      default: null,
+    },
   },
   emits: [
     'UpdateSourceMode',
@@ -670,9 +699,12 @@ export default defineComponent({
     },
     /**
      * 派发模式切换事件
-     * @param mode 文字或图片
+     * @param mode 文字 / 图片 / 像素
      */
-    EmitSourceMode(mode: 'text' | 'image') {
+    EmitSourceMode(mode: 'text' | 'image' | 'pixel') {
+      if (mode === 'pixel' && !this.importedPixelGrid) {
+        return
+      }
       this.$emit('UpdateSourceMode', mode)
     },
     /**
@@ -950,6 +982,10 @@ export default defineComponent({
   gap: 8px;
 }
 
+.mode-row .mode-btn:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
 .mode-btn {
   height: 40px;
   border: 1px solid #d7deea;
@@ -960,11 +996,42 @@ export default defineComponent({
   cursor: pointer;
 }
 
+.mode-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .mode-btn.active,
-.mode-btn:hover {
+.mode-btn:hover:not(:disabled) {
   border-color: #3f6fe8;
   color: #3f6fe8;
   background: rgba(63, 111, 232, 0.08);
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #5a6a86;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #d7deea;
+  color: #31415f;
+  text-decoration: none;
+  font-size: 0.88rem;
+  background: #fff;
+}
+
+.link-btn:hover {
+  border-color: #3f6fe8;
+  color: #3f6fe8;
 }
 
 .upload-box {

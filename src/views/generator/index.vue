@@ -32,6 +32,7 @@
         :imageMaxHeight="imageMaxHeight"
         :imageAlphaThreshold="imageAlphaThreshold"
         :imageClarity="imageClarity"
+        :importedPixelGrid="importedPixelGrid"
         @UpdateSourceMode="HandleUpdateSourceMode"
         @UpdateText="HandleUpdateText"
         @UpdateFontId="HandleUpdateFontId"
@@ -78,6 +79,7 @@
         :imageMaxHeight="imageMaxHeight"
         :imageAlphaThreshold="imageAlphaThreshold"
         :imageClarity="imageClarity"
+        :importedPixelGrid="importedPixelGrid"
       />
     </main>
   </div>
@@ -128,6 +130,7 @@ export default defineComponent({
       'imageMaxHeight',
       'imageAlphaThreshold',
       'imageClarity',
+      'importedPixelGrid',
     ]),
   },
   /**
@@ -177,9 +180,9 @@ export default defineComponent({
     ]),
     /**
      * 更新生成模式
-     * @param value text 或 image
+     * @param value text / image / pixel
      */
-    HandleUpdateSourceMode(value: 'text' | 'image') {
+    HandleUpdateSourceMode(value: 'text' | 'image' | 'pixel') {
       this.SETSOURCEMODE(value)
     },
     /**

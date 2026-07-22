@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 工具列表首页：拼豆、压缩、水印、图片/文件转换、单位转换、二维码生成等入口
+- 工具列表首页：拼豆、像素画布、压缩、水印、图片/文件转换、单位转换、二维码生成等入口
 - 文字或图片 → 像素拼豆图案（图片自动匹配 MARD 色卡）
 - 可选字体采样（黑体 / 宋体 / 站酷 / 毛笔 / 像素等）
 - 可调字间距（可负值叠连），支持逐字颜色、字号、加粗/倾斜/下划线/删除线、垂直对齐（顶/中/底）
@@ -13,6 +13,7 @@
 - 整块图案外轮廓描边豆（按豆数扩宽，可实际拼接）
 - Canvas 实时预览（可缩放）与 PNG 导出
 - 可调：模式、采样字体、图片宽高、透明抠图、格子尺寸、背景色、辅助网格
+- 像素画布：手绘 / 橡皮 / 取色 / 填充 / 图层 / 网格，导出像素图或拼豆图纸，可无损发送到拼豆生成器
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 
 ## 技术栈
@@ -111,6 +112,23 @@ src/
 ```
 
 ## 会话总结
+
+### 2026-07-22（像素填充死机修复）
+
+- **会话目的**：修复点击填充导致页面卡死。
+- **完成任务**：洪水填充增加边界检查，避免越界 `null` 与空区域目标色匹配后无限扩张。
+- **关键决策**：用 `Uint8Array` 标记已访问格，越界坐标直接跳过。
+- **修改文件**：`src/utils/PixelCanvas.ts`、`README.md`
+
+### 2026-07-22（像素画布编辑器）
+
+- **会话目的**：新增像素画布，并与拼豆生成器无缝对接。
+- **完成任务**：
+  - 手绘 / 橡皮 / 取色 / 填充、多图层、网格、尺寸调整
+  - 导出像素图 PNG、拼豆图纸 PNG
+  - Vuex `importedPixelGrid` + `sourceMode: 'pixel'` 无损导入生成器
+- **关键决策**：扁平化图层为 `ColoredPixelGrid` 后直接供 `BeadCanvas` 绘制，避免再走图片量化。
+- **修改文件**：`src/utils/PixelCanvas.ts`、`src/views/pixelEditor/index.vue`、`src/router/pixelEditor/index.ts`、`src/store/modules/generator.ts`、`src/store/index.ts`、`src/components/BeadCanvas.vue`、`src/components/ControlPanel.vue`、`src/views/generator/index.vue`、`src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-22（二维码多格式导出）
 
