@@ -131,3 +131,16 @@ src/
 - **修改文件**：
   - 新增 `.env.dev`、`.env.test`、`.env.prod`、`public/**`、`src/utils/Env.ts`
   - 更新 `vite.config.ts`、`package.json`、`index.html`、`src/router/index.ts`、`src/App.vue`、`src/vite-env.d.ts`、`README.md`
+
+### 2026-07-22（Cloudflare 白屏修复）
+
+- **会话目的**：排查 https://fuse-beads.pages.dev/ 发布后白屏问题。
+- **完成任务**：
+  - 定位到生产 `VITE_BASE_ROUTE=/fuse-beads` 导致 JS/CSS 请求错误路径
+  - 将 `.env.prod` / `.env.test` 的 `VITE_BASE_ROUTE` 改为 `/`
+  - 新增 `public/_redirects`，支持 Vue Router history 回退
+- **关键决策**：
+  - Cloudflare Pages 挂在域名根路径时，`base` 必须为 `/`
+- **修改文件**：
+  - 更新 `.env.prod`、`.env.test`、`README.md`
+  - 新增 `public/_redirects`
