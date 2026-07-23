@@ -26,7 +26,7 @@ export type PdfToolItem = {
   /** 额外表单字段 */
   fields?: Array<'angle' | 'text' | 'opacity' | 'password'>
   /** 纯前端本地处理标识 */
-  localMode?: 'pdf-to-jpg'
+  localMode?: 'pdf-to-jpg' | 'pdf-watermark'
   badge: string
 }
 
@@ -180,15 +180,15 @@ export function GetPdfToolList(): PdfToolItem[] {
     {
       id: 'watermark',
       name: 'PDF 水印',
-      description: '为每一页添加倾斜文字水印。',
+      description:
+        '文字水印（支持中文）：字号、颜色、旋转、九宫格与平铺，浏览器本地处理。',
       category: 'edit',
       available: true,
-      endpoint: '/api/pdf/watermark',
+      localMode: 'pdf-watermark',
       accept: '.pdf,application/pdf',
       multiple: false,
       minFiles: 1,
-      fields: ['text', 'opacity'],
-      badge: '可用',
+      badge: '本地',
     },
     {
       id: 'protect',

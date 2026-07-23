@@ -1,12 +1,13 @@
 /**
  * 基于 pdf-lib 的 P0 PDF 处理能力
- * 合并 / 拆分 / 旋转 / 水印 / 加密 / 图片转 PDF
+ * 合并 / 拆分 / 旋转 / 水印 / 图片转 PDF
  */
 import {
   PDFDocument,
   degrees,
   rgb,
   StandardFonts,
+  type PDFFont,
   type PDFPage,
 } from 'pdf-lib'
 
@@ -70,38 +71,191 @@ export async function RotatePdf(file: File, angle: number): Promise<Uint8Array> 
   return doc.save()
 }
 
+/** 九宫格位置 ID */
+export type WatermarkPositionId =
+  | 'topLeft'
+  | 'topCenter'
+  | 'topRight'
+  | 'middleLeft'
+  | 'center'
+  | 'middleRight'
+  | 'bottomLeft'
+  | 'bottomCenter'
+  | 'bottomRight'
+
+/** PDF 文字水印参数 */
+export type WatermarkOptions = {
+  text: string
+  /** 0~1 */
+  opacity: number
+  fontSize: number
+  /** -180~180 */
+  rotation: number
+  /** #rrggbb */
+  color: string
+  position: WatermarkPositionId
+  isTiled: boolean
+  tileSpacingX: number
+  tileSpacingY: number
+}
+
 /**
- * 为每一页添加文字水印
+ * 解析 #rgb / #rrggbb 为 0~1 分量
+ * @param hex 颜色
+ * @returns rgb
+ */
+function ParseHexColor(hex: string): { r: number; g: number; b: number } {
+  const raw = hex.replace('#', '').trim()
+  const full =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : raw
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) {
+    return { r: 0.45, g: 0.45, b: 0.45 }
+  }
+  return {
+    r: parseInt(full.slice(0, 2), 16) / 255,
+    g: parseInt(full.slice(2, 4), 16) / 255,
+    b: parseInt(full.slice(4, 6), 16) / 255,
+  }
+}
+
+/**
+ * 按九宫格计算水印基线起点（PDF 坐标：原点左下）
+ * @param width 页宽
+ * @param height 页高
+ * @param textWidth 文字宽
+ * @param fontSize 字号
+ * @param position 位置
+ * @returns 坐标
+ */
+function ResolvePositionPoint(
+  width: number,
+  height: number,
+  textWidth: number,
+  fontSize: number,
+  position: WatermarkPositionId,
+): { x: number; y: number } {
+  const margin = Math.max(16, fontSize * 0.5)
+  const map: Record<WatermarkPositionId, { x: number; y: number }> = {
+    topLeft: { x: margin, y: height - margin - fontSize },
+    topCenter: { x: (width - textWidth) / 2, y: height - margin - fontSize },
+    topRight: { x: width - margin - textWidth, y: height - margin - fontSize },
+    middleLeft: { x: margin, y: (height - fontSize) / 2 },
+    center: { x: (width - textWidth) / 2, y: (height - fontSize) / 2 },
+    middleRight: { x: width - margin - textWidth, y: (height - fontSize) / 2 },
+    bottomLeft: { x: margin, y: margin },
+    bottomCenter: { x: (width - textWidth) / 2, y: margin },
+    bottomRight: { x: width - margin - textWidth, y: margin },
+  }
+  return map[position] || map.center
+}
+
+/**
+ * 在指定基线坐标绘制文字水印
+ * @param page 页
+ * @param font 字体
+ * @param text 文案
+ * @param x 基线 x
+ * @param y 基线 y
+ * @param fontSize 字号
+ * @param rotation 角度（支持负值）
+ * @param color 颜色
+ * @param opacity 透明度
+ */
+function DrawWatermarkAt(
+  page: PDFPage,
+  font: PDFFont,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  rotation: number,
+  color: { r: number; g: number; b: number },
+  opacity: number,
+) {
+  page.drawText(text, {
+    x,
+    y,
+    size: fontSize,
+    font,
+    color: rgb(color.r, color.g, color.b),
+    opacity,
+    rotate: degrees(rotation),
+  })
+}
+
+/**
+ * 为每一页添加文字水印（支持字号 / 颜色 / 旋转 / 九宫格 / 平铺）
  * @param file PDF
- * @param text 水印文案
- * @param opacity 透明度 0~1
+ * @param options 水印参数
  * @returns 新 PDF 字节
  */
 export async function WatermarkPdf(
   file: File,
-  text: string,
-  opacity = 0.28,
+  options: WatermarkOptions,
 ): Promise<Uint8Array> {
-  if (!text.trim()) {
+  const text = options.text.trim()
+  if (!text) {
     throw new Error('水印文字不能为空')
   }
+
+  const fontSize = Math.min(120, Math.max(8, Number(options.fontSize) || 24))
+  const rotation = Math.min(180, Math.max(-180, Number(options.rotation) || 0))
+  const opacity = Math.min(1, Math.max(0.05, Number(options.opacity) || 0.28))
+  const color = ParseHexColor(options.color || '#737373')
+  const position = options.position || 'center'
+  const isTiled = Boolean(options.isTiled)
+  const tileSpacingX = Math.min(400, Math.max(20, Number(options.tileSpacingX) || 100))
+  const tileSpacingY = Math.min(400, Math.max(20, Number(options.tileSpacingY) || 100))
+
   const bytes = new Uint8Array(await file.arrayBuffer())
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const font = await doc.embedFont(StandardFonts.Helvetica)
-  const pages = doc.getPages()
-  for (const page of pages) {
+  const textWidth = font.widthOfTextAtSize(text, fontSize)
+
+  for (const page of doc.getPages()) {
     const { width, height } = page.getSize()
-    const size = Math.max(18, Math.min(width, height) / 12)
-    page.drawText(text, {
-      x: width * 0.18,
-      y: height * 0.45,
-      size,
-      font,
-      color: rgb(0.45, 0.45, 0.45),
-      opacity: Math.min(1, Math.max(0.05, opacity)),
-      rotate: degrees(35),
-    })
+
+    if (isTiled) {
+      const tileWidth = Math.max(textWidth + 8, textWidth + tileSpacingX)
+      const tileHeight = Math.max(fontSize + 8, fontSize + tileSpacingY)
+      const origin = ResolvePositionPoint(width, height, textWidth, fontSize, position)
+      const offsetX = ((origin.x % tileWidth) + tileWidth) % tileWidth
+      const offsetY = ((origin.y % tileHeight) + tileHeight) % tileHeight
+      const startX = offsetX - tileWidth
+      const startY = offsetY - tileHeight
+      const cols = Math.ceil((width - startX) / tileWidth) + 1
+      const rows = Math.ceil((height - startY) / tileHeight) + 1
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let col = 0; col < cols; col += 1) {
+          const x = startX + col * tileWidth
+          const y = startY + row * tileHeight
+          if (x > width + tileWidth || y > height + tileHeight) continue
+          if (x + textWidth < -tileWidth || y + fontSize < -tileHeight) continue
+          DrawWatermarkAt(page, font, text, x, y, fontSize, rotation, color, opacity)
+        }
+      }
+    } else {
+      const point = ResolvePositionPoint(width, height, textWidth, fontSize, position)
+      DrawWatermarkAt(
+        page,
+        font,
+        text,
+        point.x,
+        point.y,
+        fontSize,
+        rotation,
+        color,
+        opacity,
+      )
+    }
   }
+
   return doc.save()
 }
 

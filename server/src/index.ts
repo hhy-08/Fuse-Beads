@@ -219,8 +219,31 @@ export async function HandleApi(request: Request, env: Env): Promise<Response> {
 
   if (path === '/api/pdf/watermark') {
     const text = String(formData.get('text') || '')
-    const opacity = Number(formData.get('opacity') || '0.28')
-    const bytes = await WatermarkPdf(files[0], text, opacity)
+    const opacityRaw = Number(formData.get('opacity') || '28')
+    // 兼容 0~1 与 0~100
+    const opacity = opacityRaw > 1 ? opacityRaw / 100 : opacityRaw
+    const bytes = await WatermarkPdf(files[0], {
+      text,
+      opacity,
+      fontSize: Number(formData.get('fontSize') || '24'),
+      rotation: Number(formData.get('rotation') || '0'),
+      color: String(formData.get('color') || '#737373'),
+      position: String(formData.get('position') || 'center') as
+        | 'topLeft'
+        | 'topCenter'
+        | 'topRight'
+        | 'middleLeft'
+        | 'center'
+        | 'middleRight'
+        | 'bottomLeft'
+        | 'bottomCenter'
+        | 'bottomRight',
+      isTiled:
+        String(formData.get('isTiled') || '') === '1' ||
+        String(formData.get('isTiled') || '') === 'true',
+      tileSpacingX: Number(formData.get('tileSpacingX') || '100'),
+      tileSpacingY: Number(formData.get('tileSpacingY') || '100'),
+    })
     return FileResponse(
       request,
       env,

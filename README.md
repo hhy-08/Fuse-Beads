@@ -223,6 +223,21 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-23（PDF 水印支持中文）
+
+- **会话目的**：PDF 水印支持中文显示。
+- **完成任务**：水印改为浏览器本地（pdf.js + Canvas + jsPDF），用系统中文字体绘制；保留字号/颜色/旋转/位置/平铺。
+- **关键决策**：不在 Worker 内嵌完整 CJK 字体（体积过大）；本地栅格化换中文兼容性。
+- **修改文件**：`LocalPdfWatermark.ts`、`PdfToolList.ts`、`tool.vue`、`README.md`
+
+### 2026-07-23（PDF 水印增强对齐图片水印）
+
+- **会话目的**：PDF 水印增加与图片水印类似的效果参数。
+- **完成任务**：支持字号、颜色、旋转（含负值）、九宫格位置、平铺及间距；前后端同步传参。
+- **关键决策**：暂不移植「自由拖动」（PDF 无实时画布）；标准 Helvetica 暂不支持中文轮廓。
+- **修改文件**：`server/src/pdf/operations.ts`、`server/src/index.ts`、`src/views/pdfTools/tool.vue`、`PdfToolList.ts`、`README.md`
+- **注意**：需重新 `cd server && npm run deploy`，前端推送/重新部署 Pages 后线上生效。
+
 ### 2026-07-23（PDF 结果预览）
 
 - **会话目的**：处理完成后可预览 PDF 结果（如水印效果）。

@@ -73,28 +73,127 @@
           </label>
         </div>
 
-        <div v-if="tool.fields?.includes('text')" class="field-row">
-          <label>
-            水印文字
-            <input v-model.trim="watermarkText" type="text" :disabled="isBusy" placeholder="CONFIDENTIAL" />
-          </label>
-        </div>
+        <template v-if="isWatermarkTool">
+          <div class="field-row">
+            <label>
+              水印文字
+              <input
+                v-model.trim="watermarkText"
+                type="text"
+                :disabled="isBusy"
+                placeholder="CONFIDENTIAL"
+              />
+            </label>
+          </div>
+          <div class="field-row field-inline">
+            <label>
+              文字颜色
+              <input v-model="watermarkColor" type="color" :disabled="isBusy" />
+            </label>
+            <label>
+              字体大小 {{ watermarkFontSize }}
+              <input
+                v-model.number="watermarkFontSize"
+                type="range"
+                min="12"
+                max="72"
+                step="1"
+                :disabled="isBusy"
+              />
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              透明度 {{ watermarkOpacity }}%
+              <input
+                v-model.number="watermarkOpacity"
+                type="range"
+                min="5"
+                max="100"
+                step="1"
+                :disabled="isBusy"
+              />
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              旋转角度（支持负值）{{ watermarkRotation }}°
+              <div class="range-with-number">
+                <input
+                  v-model.number="watermarkRotation"
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="1"
+                  :disabled="isBusy"
+                />
+                <input
+                  v-model.number="watermarkRotation"
+                  type="number"
+                  min="-180"
+                  max="180"
+                  step="1"
+                  :disabled="isBusy"
+                />
+              </div>
+            </label>
+          </div>
+          <div class="field-row">
+            <span class="field-label">水印位置</span>
+            <div class="position-grid">
+              <button
+                v-for="pos in watermarkPositions"
+                :key="pos.id"
+                type="button"
+                class="position-btn"
+                :class="{ active: watermarkPosition === pos.id }"
+                :disabled="isBusy"
+                @click="watermarkPosition = pos.id"
+              >
+                {{ pos.label }}
+              </button>
+            </div>
+          </div>
+          <div class="field-row">
+            <label class="checkbox-label">
+              <input v-model="watermarkIsTiled" type="checkbox" :disabled="isBusy" />
+              平铺水印
+            </label>
+          </div>
+          <template v-if="watermarkIsTiled">
+            <div class="field-row">
+              <label>
+                水平间距 {{ watermarkTileX }}
+                <input
+                  v-model.number="watermarkTileX"
+                  type="range"
+                  min="20"
+                  max="200"
+                  step="1"
+                  :disabled="isBusy"
+                />
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                垂直间距 {{ watermarkTileY }}
+                <input
+                  v-model.number="watermarkTileY"
+                  type="range"
+                  min="20"
+                  max="200"
+                  step="1"
+                  :disabled="isBusy"
+                />
+              </label>
+            </div>
+          </template>
+          <p class="field-tip">
+            本地处理，支持中文（使用系统字体）。页面会栅格化后合成 PDF，体积可能略增。
+          </p>
+        </template>
 
-        <div v-if="tool.fields?.includes('opacity')" class="field-row">
-          <label>
-            透明度 {{ opacity }}
-            <input
-              v-model.number="opacity"
-              type="range"
-              min="0.08"
-              max="0.6"
-              step="0.02"
-              :disabled="isBusy"
-            />
-          </label>
-        </div>
-
-        <div v-if="tool.fields?.includes('password')" class="field-row">
+        <div v-else-if="tool.fields?.includes('password')" class="field-row">
           <label>
             打开密码
             <input
@@ -180,6 +279,7 @@ import { GetAppTitle } from '@/utils/Env'
 import { FindPdfToolById, type PdfToolItem } from '@/utils/pdfTools/PdfToolList'
 import { CallPdfApi, DownloadBlob } from '@/utils/pdfTools/PdfApi'
 import { ConvertPdfToJpgLocal } from '@/utils/pdfTools/LocalPdfToJpg'
+import { WatermarkPdfLocal } from '@/utils/pdfTools/LocalPdfWatermark'
 import {
   IsPdfResult,
   OpenPdfPreview,
@@ -218,7 +318,34 @@ export default defineComponent({
       resultName: '',
       angle: 90,
       watermarkText: 'CONFIDENTIAL',
-      opacity: 0.28,
+      watermarkColor: '#737373',
+      watermarkFontSize: 28,
+      watermarkOpacity: 28,
+      watermarkRotation: -35,
+      watermarkPosition: 'center' as
+        | 'topLeft'
+        | 'topCenter'
+        | 'topRight'
+        | 'middleLeft'
+        | 'center'
+        | 'middleRight'
+        | 'bottomLeft'
+        | 'bottomCenter'
+        | 'bottomRight',
+      watermarkIsTiled: false,
+      watermarkTileX: 100,
+      watermarkTileY: 100,
+      watermarkPositions: [
+        { id: 'topLeft' as const, label: '左上' },
+        { id: 'topCenter' as const, label: '中上' },
+        { id: 'topRight' as const, label: '右上' },
+        { id: 'middleLeft' as const, label: '左中' },
+        { id: 'center' as const, label: '中心' },
+        { id: 'middleRight' as const, label: '右中' },
+        { id: 'bottomLeft' as const, label: '左下' },
+        { id: 'bottomCenter' as const, label: '下中' },
+        { id: 'bottomRight' as const, label: '右下' },
+      ],
       password: '',
       showPreview: false,
       previewDoc: null as PdfPreviewDoc | null,
@@ -229,6 +356,13 @@ export default defineComponent({
     }
   },
   computed: {
+    /**
+     * 是否为 PDF 水印工具
+     * @returns boolean
+     */
+    isWatermarkTool(): boolean {
+      return this.tool?.id === 'watermark'
+    },
     /**
      * 当前结果是否可预览为 PDF
      * @returns boolean
@@ -438,16 +572,41 @@ export default defineComponent({
           })
           this.resultBlob = result.blob
           this.resultName = result.fileName
+        } else if (this.tool.localMode === 'pdf-watermark') {
+          const result = await WatermarkPdfLocal(
+            files[0],
+            {
+              text: this.watermarkText,
+              color: this.watermarkColor,
+              fontSize: this.watermarkFontSize,
+              opacity: this.watermarkOpacity,
+              rotation: this.watermarkRotation,
+              position: this.watermarkPosition,
+              isTiled: this.watermarkIsTiled,
+              tileSpacingX: this.watermarkTileX,
+              tileSpacingY: this.watermarkTileY,
+            },
+            (percent) => {
+              this.progress = percent
+            },
+          )
+          this.resultBlob = result.blob
+          this.resultName = result.fileName
         } else if (this.tool.endpoint) {
           const fields: Record<string, string> = {}
           if (this.tool.fields?.includes('angle')) {
             fields.angle = String(this.angle)
           }
-          if (this.tool.fields?.includes('text')) {
+          if (this.isWatermarkTool) {
             fields.text = this.watermarkText
-          }
-          if (this.tool.fields?.includes('opacity')) {
-            fields.opacity = String(this.opacity)
+            fields.color = this.watermarkColor
+            fields.fontSize = String(this.watermarkFontSize)
+            fields.opacity = String(this.watermarkOpacity)
+            fields.rotation = String(this.watermarkRotation)
+            fields.position = this.watermarkPosition
+            fields.isTiled = this.watermarkIsTiled ? '1' : '0'
+            fields.tileSpacingX = String(this.watermarkTileX)
+            fields.tileSpacingY = String(this.watermarkTileY)
           }
           if (this.tool.fields?.includes('password')) {
             if (!this.password) {
@@ -663,12 +822,83 @@ export default defineComponent({
   font-size: 0.92rem;
 }
 
+.field-inline {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: end;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #31415f;
+  font-size: 0.92rem;
+}
+
+.field-tip {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6a7a94;
+  line-height: 1.45;
+}
+
+.range-with-number {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: 8px;
+  align-items: center;
+}
+
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.position-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.position-btn {
+  border: 1px solid rgba(49, 65, 95, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 8px 6px;
+  cursor: pointer;
+  font: inherit;
+  color: #31415f;
+}
+
+.position-btn.active {
+  background: #31486f;
+  border-color: #31486f;
+  color: #fff8ef;
+}
+
+.position-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .field-row input,
 .field-row select {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(49, 65, 95, 0.2);
   font: inherit;
+}
+
+.field-row input[type='range'] {
+  padding: 0;
+}
+
+.field-row input[type='color'] {
+  width: 48px;
+  height: 36px;
+  padding: 2px;
 }
 
 .actions {
