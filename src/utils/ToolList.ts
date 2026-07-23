@@ -165,6 +165,15 @@ export function GetToolList(): ToolItem[] {
       category: 'image',
     },
     {
+      id: 'image-to-ico',
+      name: '图片转 ICO',
+      description: '将图片转为多尺寸 ICO 图标（16~256），支持完整放入 / 铺满裁切，本地下载。',
+      path: '/image-to-ico',
+      available: true,
+      badge: '可用',
+      category: 'image',
+    },
+    {
       id: 'file',
       name: '文件转换',
       description: '同格式多文件批量转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
