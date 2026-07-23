@@ -223,6 +223,13 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-23（PDF 结果预览）
+
+- **会话目的**：处理完成后可预览 PDF 结果（如水印效果）。
+- **完成任务**：新增 pdf.js 预览工具；工具页在 PDF 结果生成后展示可翻页预览。
+- **关键决策**：仅对 PDF 结果预览（ZIP/图片跳过）；浏览器本地渲染，不增加后端负担。
+- **修改文件**：`src/utils/pdfTools/PdfPreview.ts`、`src/views/pdfTools/tool.vue`、`README.md`
+
 ### 2026-07-23（同源 /api 绕过 workers.dev 超时）
 
 - **会话目的**：解决浏览器访问 `*.workers.dev` 连接超时（国内常见）。

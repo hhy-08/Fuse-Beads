@@ -132,6 +132,36 @@
         </div>
         <p v-if="statusText" class="status" :class="{ error: hasError }">{{ statusText }}</p>
       </section>
+
+      <section v-if="showPreview" class="preview-card">
+        <div class="preview-head">
+          <p class="list-title">结果预览</p>
+          <div class="preview-nav">
+            <button
+              type="button"
+              class="secondary"
+              :disabled="previewPage <= 1 || isPreviewLoading"
+              @click="HandlePreviewPrev"
+            >
+              上一页
+            </button>
+            <span class="preview-page">{{ previewPage }} / {{ previewPageCount }}</span>
+            <button
+              type="button"
+              class="secondary"
+              :disabled="previewPage >= previewPageCount || isPreviewLoading"
+              @click="HandlePreviewNext"
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+        <p v-if="previewError" class="status error">{{ previewError }}</p>
+        <p v-else-if="isPreviewLoading" class="status">正在渲染预览…</p>
+        <div class="preview-frame">
+          <canvas ref="previewCanvas" class="preview-canvas" />
+        </div>
+      </section>
     </main>
 
     <main v-else class="workspace">
@@ -150,6 +180,11 @@ import { GetAppTitle } from '@/utils/Env'
 import { FindPdfToolById, type PdfToolItem } from '@/utils/pdfTools/PdfToolList'
 import { CallPdfApi, DownloadBlob } from '@/utils/pdfTools/PdfApi'
 import { ConvertPdfToJpgLocal } from '@/utils/pdfTools/LocalPdfToJpg'
+import {
+  IsPdfResult,
+  OpenPdfPreview,
+  type PdfPreviewDoc,
+} from '@/utils/pdfTools/PdfPreview'
 
 const APPBRAND = GetAppTitle()
 
@@ -185,7 +220,24 @@ export default defineComponent({
       watermarkText: 'CONFIDENTIAL',
       opacity: 0.28,
       password: '',
+      showPreview: false,
+      previewDoc: null as PdfPreviewDoc | null,
+      previewPage: 1,
+      previewPageCount: 0,
+      isPreviewLoading: false,
+      previewError: '',
     }
+  },
+  computed: {
+    /**
+     * 当前结果是否可预览为 PDF
+     * @returns boolean
+     */
+    canPreviewPdf(): boolean {
+      return Boolean(
+        this.resultBlob && this.resultName && IsPdfResult(this.resultBlob, this.resultName),
+      )
+    },
   },
   watch: {
     '$route.params.toolId': {
@@ -202,8 +254,12 @@ export default defineComponent({
         this.resultBlob = null
         this.resultName = ''
         this.progress = 0
+        this.ClearPreview()
       },
     },
+  },
+  beforeUnmount() {
+    this.ClearPreview()
   },
   methods: {
     /**
@@ -223,6 +279,84 @@ export default defineComponent({
       this.fileList = []
       const input = this.$refs.fileInput as HTMLInputElement | undefined
       if (input) input.value = ''
+      this.ClearPreview()
+      this.resultBlob = null
+      this.resultName = ''
+    },
+    /**
+     * 释放预览文档
+     */
+    async ClearPreview() {
+      this.showPreview = false
+      this.previewPage = 1
+      this.previewPageCount = 0
+      this.previewError = ''
+      this.isPreviewLoading = false
+      if (this.previewDoc) {
+        try {
+          await this.previewDoc.destroy()
+        } catch {
+          /* ignore */
+        }
+        this.previewDoc = null
+      }
+    },
+    /**
+     * 根据结果 Blob 打开 PDF 预览
+     */
+    async LoadPreviewFromResult() {
+      await this.ClearPreview()
+      if (!this.resultBlob || !this.canPreviewPdf) return
+
+      this.showPreview = true
+      this.isPreviewLoading = true
+      this.previewError = ''
+      try {
+        this.previewDoc = await OpenPdfPreview(this.resultBlob)
+        this.previewPageCount = this.previewDoc.pageCount
+        this.previewPage = 1
+        await this.$nextTick()
+        await this.RenderPreviewPage()
+      } catch (error) {
+        console.error(error)
+        this.previewError = error instanceof Error ? error.message : '预览失败'
+      } finally {
+        this.isPreviewLoading = false
+      }
+    },
+    /**
+     * 渲染当前预览页
+     */
+    async RenderPreviewPage() {
+      if (!this.previewDoc) return
+      const canvas = this.$refs.previewCanvas as HTMLCanvasElement | undefined
+      if (!canvas) return
+      this.isPreviewLoading = true
+      this.previewError = ''
+      try {
+        await this.previewDoc.RenderPage(this.previewPage, canvas, 1.2)
+      } catch (error) {
+        console.error(error)
+        this.previewError = error instanceof Error ? error.message : '渲染失败'
+      } finally {
+        this.isPreviewLoading = false
+      }
+    },
+    /**
+     * 预览上一页
+     */
+    async HandlePreviewPrev() {
+      if (this.previewPage <= 1) return
+      this.previewPage -= 1
+      await this.RenderPreviewPage()
+    },
+    /**
+     * 预览下一页
+     */
+    async HandlePreviewNext() {
+      if (this.previewPage >= this.previewPageCount) return
+      this.previewPage += 1
+      await this.RenderPreviewPage()
     },
     /**
      * 移除单个文件
@@ -293,6 +427,7 @@ export default defineComponent({
       this.statusText = '处理中…'
       this.resultBlob = null
       this.resultName = ''
+      await this.ClearPreview()
 
       try {
         const files = this.fileList.map((item) => item.file)
@@ -331,6 +466,7 @@ export default defineComponent({
 
         this.statusText = '完成，可下载结果'
         this.progress = 100
+        await this.LoadPreviewFromResult()
       } catch (error) {
         console.error(error)
         this.hasError = true
@@ -586,6 +722,54 @@ export default defineComponent({
 
 .status.error {
   color: #b04040;
+}
+
+.preview-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(49, 65, 95, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-page {
+  min-width: 4.5rem;
+  text-align: center;
+  color: #31415f;
+  font-size: 0.9rem;
+}
+
+.preview-frame {
+  overflow: auto;
+  max-height: min(70vh, 720px);
+  border-radius: 12px;
+  background: #d8e0ec;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.preview-canvas {
+  max-width: 100%;
+  height: auto;
+  box-shadow: 0 8px 24px rgba(30, 45, 70, 0.18);
+  background: #fff;
 }
 
 .back-link {
