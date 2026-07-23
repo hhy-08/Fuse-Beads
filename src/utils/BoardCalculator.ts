@@ -5,8 +5,8 @@
 
 import { DecodeBeadBlueprint } from '@/utils/BeadBlueprintDecoder'
 import { CountColorUsage } from '@/utils/ImageToPixels'
-import { FindMardColorByHex, type MardColor } from '@/utils/MardColors'
-import type { ColoredPixelGrid } from '@/utils/TextToPixels'
+import { FindMardColorByHex, NormalizeHex, type MardColor } from '@/utils/MardColors'
+import type { BeadPatternGrid, ColoredPixelGrid } from '@/utils/TextToPixels'
 
 /** 标准拼豆板规格 */
 export type BeadBoardSpec = {
@@ -273,6 +273,44 @@ export function BuildColorUsageStats(
       percent: Math.round((item.count / total) * 1000) / 10,
     }
   })
+}
+
+/**
+ * 从拼豆图案网格统计色号用量（含主体与描边）
+ * @param pattern 图案网格
+ * @returns 用量列表（按数量降序）
+ */
+export function BuildBeadPatternColorUsage(
+  pattern: BeadPatternGrid,
+): ColorUsageItem[] {
+  const counter = new Map<string, number>()
+
+  for (let y = 0; y < pattern.height; y += 1) {
+    for (let x = 0; x < pattern.width; x += 1) {
+      const cell = pattern.cells[y]?.[x]
+      if (!cell || cell.kind === 'empty') {
+        continue
+      }
+      const hex = NormalizeHex(cell.color || '')
+      if (!hex) {
+        continue
+      }
+      counter.set(hex, (counter.get(hex) || 0) + 1)
+    }
+  }
+
+  const total = Array.from(counter.values()).reduce((sum, n) => sum + n, 0) || 1
+  return Array.from(counter.entries())
+    .map(([hex, count]) => {
+      const matched = FindMardColorByHex(hex)
+      return {
+        code: matched?.code || hex.replace('#', ''),
+        hex: matched?.hex || hex,
+        count,
+        percent: Math.round((count / total) * 1000) / 10,
+      }
+    })
+    .sort((left, right) => right.count - left.count)
 }
 
 /**

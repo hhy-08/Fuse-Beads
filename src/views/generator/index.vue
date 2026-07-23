@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <p class="brand">{{ appBrand }}</p>
         <h1>拼豆工具</h1>
-        <p class="subtitle">文字或图片一键生成可打印的拼豆像素图纸</p>
+        <p class="subtitle">文字或图片一键生成可打印的拼豆像素图纸，并统计各色用量</p>
       </div>
       <nav class="hero-nav">
         <router-link to="/">工具列表</router-link>

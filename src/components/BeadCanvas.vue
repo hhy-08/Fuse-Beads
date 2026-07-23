@@ -6,6 +6,9 @@
         <p>
           网格 {{ gridWidth }} × {{ gridHeight }} · 主体 {{ fillCount }} · 描边
           {{ outlineCount }} · 合计 {{ beadCount }}
+          <template v-if="colorUsage.length">
+            · {{ colorUsage.length }} 色
+          </template>
         </p>
       </div>
 
@@ -51,13 +54,43 @@
         ></canvas>
       </div>
     </div>
+
+    <section v-if="colorUsage.length" class="usage-panel">
+      <div class="usage-head">
+        <h3>颜色用量统计</h3>
+        <span>共 {{ colorUsage.length }} 色 · 合计 {{ beadCount }} 粒</span>
+      </div>
+      <div class="usage-list">
+        <div
+          v-for="item in colorUsage"
+          :key="`${item.code}-${item.hex}`"
+          class="usage-item"
+        >
+          <span class="swatch" :style="{ background: item.hex }" />
+          <div class="usage-meta">
+            <strong>{{ item.code }}</strong>
+            <span>{{ item.hex }}</span>
+          </div>
+          <div class="usage-bar-wrap">
+            <div
+              class="usage-bar"
+              :style="{ width: `${Math.min(100, item.percent)}%` }"
+            />
+          </div>
+          <div class="usage-count">
+            <strong>{{ item.count }}</strong>
+            <span>{{ item.percent }}%</span>
+          </div>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <script lang="ts">
 /**
  * 拼豆 Canvas 预览组件
- * 支持字间距、逐字样式，以及预览缩放
+ * 支持字间距、逐字样式、预览缩放与色号用量统计
  */
 import { defineComponent, type PropType } from 'vue'
 import {
@@ -75,6 +108,10 @@ import {
 } from '../utils/ImageToPixels'
 import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
 import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
+import {
+  BuildBeadPatternColorUsage,
+  type ColorUsageItem,
+} from '../utils/BoardCalculator'
 
 const MINZOOM = 0.5
 const MAXZOOM = 3
@@ -107,6 +144,7 @@ export default defineComponent({
       default: null,
     },
   },
+  emits: ['UpdateColorUsage'],
   data() {
     return {
       gridWidth: 0,
@@ -114,6 +152,7 @@ export default defineComponent({
       fillCount: 0,
       outlineCount: 0,
       beadCount: 0,
+      colorUsage: [] as ColorUsageItem[],
       patternGrid: { width: 0, height: 0, cells: [] } as BeadPatternGrid,
       redrawTimer: null as ReturnType<typeof setTimeout> | null,
       renderToken: 0,
@@ -348,6 +387,8 @@ export default defineComponent({
       this.fillCount = counts.fillCount
       this.outlineCount = counts.outlineCount
       this.beadCount = counts.totalCount
+      this.colorUsage = BuildBeadPatternColorUsage(this.patternGrid)
+      this.$emit('UpdateColorUsage', this.colorUsage)
 
       DrawBeadPattern(canvas, this.patternGrid, {
         beadSize: this.beadSize,
@@ -526,6 +567,98 @@ export default defineComponent({
   image-rendering: crisp-edges;
 }
 
+.usage-panel {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(40, 56, 84, 0.1);
+}
+
+.usage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.usage-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #22314d;
+}
+
+.usage-head span {
+  color: #66748d;
+  font-size: 0.86rem;
+}
+
+.usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.usage-item {
+  display: grid;
+  grid-template-columns: 28px minmax(72px, 100px) 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.usage-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usage-meta strong {
+  color: #1d2a44;
+  font-size: 0.92rem;
+}
+
+.usage-meta span {
+  color: #8a96aa;
+  font-size: 0.75rem;
+}
+
+.usage-bar-wrap {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(49, 65, 95, 0.08);
+  overflow: hidden;
+}
+
+.usage-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #31486f;
+}
+
+.usage-count {
+  text-align: right;
+  min-width: 64px;
+}
+
+.usage-count strong {
+  display: block;
+  color: #1d2a44;
+}
+
+.usage-count span {
+  color: #6a7a96;
+  font-size: 0.78rem;
+}
+
 @keyframes fadePanel {
   from {
     opacity: 0;
@@ -544,6 +677,14 @@ export default defineComponent({
 
   .zoom-range {
     width: 88px;
+  }
+
+  .usage-item {
+    grid-template-columns: 28px 1fr auto;
+  }
+
+  .usage-bar-wrap {
+    grid-column: 1 / -1;
   }
 }
 </style>
