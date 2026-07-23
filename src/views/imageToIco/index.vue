@@ -80,7 +80,15 @@
             <img :src="item.previewUrl" :alt="item.file.name" />
             <div class="file-info">
               <p class="file-name">{{ item.file.name }}</p>
-              <p class="file-size">{{ FormatSize(item.file.size) }}</p>
+              <p class="file-size">
+                原图 {{ FormatSize(item.file.size) }}
+                <span v-if="item.icoBytes != null" class="ico-size">
+                  → ICO {{ FormatSize(item.icoBytes) }}
+                  <template v-if="item.icoFileName">
+                    （{{ item.icoFileName }}）
+                  </template>
+                </span>
+              </p>
             </div>
             <button
               type="button"
@@ -142,6 +150,10 @@ type IcoFileItem = {
   uid: string
   file: File
   previewUrl: string
+  /** 转换后 ICO 字节数；未转换时为 null */
+  icoBytes: number | null
+  /** 转换后文件名 */
+  icoFileName: string
 }
 
 export default defineComponent({
@@ -236,9 +248,38 @@ export default defineComponent({
         uid: CreateUploadUid(),
         file,
         previewUrl: URL.createObjectURL(file),
+        icoBytes: null as number | null,
+        icoFileName: '',
       }))
       this.selectedFiles = [...this.selectedFiles, ...next]
       this.SetStatus('')
+    },
+    /**
+     * 清空已显示的转换体积（尺寸/缩放变化后需重转）
+     */
+    ClearIcoResults() {
+      this.selectedFiles = this.selectedFiles.map((item) => ({
+        ...item,
+        icoBytes: null,
+        icoFileName: '',
+      }))
+    },
+    /**
+     * 写入单张转换体积
+     * @param index 下标
+     * @param bytes ICO 字节数
+     * @param fileName 文件名
+     */
+    PatchIcoResult(index: number, bytes: number, fileName: string) {
+      const item = this.selectedFiles[index]
+      if (!item) {
+        return
+      }
+      this.selectedFiles.splice(index, 1, {
+        ...item,
+        icoBytes: bytes,
+        icoFileName: fileName,
+      })
     },
     /**
      * 处理文件选择
@@ -291,16 +332,21 @@ export default defineComponent({
           return
         }
         this.selectedSizes = this.selectedSizes.filter((item) => item !== size)
-        return
+      } else {
+        this.selectedSizes = [...this.selectedSizes, size].sort((a, b) => a - b)
       }
-      this.selectedSizes = [...this.selectedSizes, size].sort((a, b) => a - b)
+      this.ClearIcoResults()
     },
     /**
      * 切换缩放方式
      * @param fit 适配模式
      */
     HandleFitChange(fit: IcoFitMode) {
+      if (this.fitMode === fit) {
+        return
+      }
       this.fitMode = fit
+      this.ClearIcoResults()
     },
     /**
      * 移除单张
@@ -336,6 +382,7 @@ export default defineComponent({
 
       this.isConverting = true
       this.convertedCount = 0
+      this.ClearIcoResults()
       this.SetStatus('正在生成 ICO…')
 
       try {
@@ -346,14 +393,16 @@ export default defineComponent({
             this.fitMode,
           )
           this.convertedCount = 1
+          this.PatchIcoResult(0, result.blob.size, result.fileName)
           DownloadIcoBlob(result.blob, result.fileName)
           this.SetStatus(
-            `已下载 ${result.fileName}（含 ${result.sizes.join('/')} px）`,
+            `已下载 ${result.fileName} · ${this.FormatSize(result.blob.size)}（含 ${result.sizes.join('/')} px）`,
           )
           return
         }
 
         const zip = new JSZip()
+        let totalIcoBytes = 0
         for (let i = 0; i < this.selectedFiles.length; i += 1) {
           const result = await ConvertImageToIco(
             this.selectedFiles[i].file,
@@ -361,11 +410,15 @@ export default defineComponent({
             this.fitMode,
           )
           zip.file(result.fileName, result.blob)
+          this.PatchIcoResult(i, result.blob.size, result.fileName)
+          totalIcoBytes += result.blob.size
           this.convertedCount = i + 1
         }
         const zipBlob = await zip.generateAsync({ type: 'blob' })
         DownloadIcoBlob(zipBlob, 'icons.zip')
-        this.SetStatus(`已打包下载 ${this.selectedFiles.length} 个 ICO`)
+        this.SetStatus(
+          `已打包 ${this.selectedFiles.length} 个 ICO · 合计 ${this.FormatSize(totalIcoBytes)} · ZIP ${this.FormatSize(zipBlob.size)}`,
+        )
       } catch (error) {
         this.SetStatus(
           error instanceof Error ? error.message : '转换失败，请重试',
@@ -592,6 +645,11 @@ export default defineComponent({
   margin-top: 4px;
   font-size: 0.8rem;
   color: #6a7a94;
+}
+
+.ico-size {
+  color: #2f6b4f;
+  font-weight: 600;
 }
 
 .remove-btn {
