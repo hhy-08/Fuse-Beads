@@ -699,8 +699,14 @@ function SplitRectsByVerticalSegment(
 ): SplitRect[] {
   const next: SplitRect[] = []
   for (const rect of rects) {
-    const overlapStart = Math.max(rect.y, yStart)
-    const overlapEnd = Math.min(rect.y + rect.height, yEnd)
+    const rawStart = Math.max(rect.y, yStart)
+    const rawEnd = Math.min(rect.y + rect.height, yEnd)
+    const { start: overlapStart, end: overlapEnd } = AbsorbMicroOverlap(
+      rect.y,
+      rect.y + rect.height,
+      rawStart,
+      rawEnd,
+    )
     const canSplit =
       x > rect.x &&
       x < rect.x + rect.width &&
@@ -759,8 +765,14 @@ function SplitRectsByHorizontalSegment(
 ): SplitRect[] {
   const next: SplitRect[] = []
   for (const rect of rects) {
-    const overlapStart = Math.max(rect.x, xStart)
-    const overlapEnd = Math.min(rect.x + rect.width, xEnd)
+    const rawStart = Math.max(rect.x, xStart)
+    const rawEnd = Math.min(rect.x + rect.width, xEnd)
+    const { start: overlapStart, end: overlapEnd } = AbsorbMicroOverlap(
+      rect.x,
+      rect.x + rect.width,
+      rawStart,
+      rawEnd,
+    )
     const canSplit =
       y > rect.y &&
       y < rect.y + rect.height &&
@@ -815,6 +827,132 @@ function NormalizeCutSegment(cut: FreeCutSegment): FreeCutSegment {
 }
 
 /**
+ * 将数值吸附到最近参考线
+ * @param value 原始值
+ * @param guides 参考线坐标
+ * @param threshold 吸附阈值（像素）
+ * @returns 吸附后的值
+ */
+function SnapToGuides(
+  value: number,
+  guides: number[],
+  threshold: number,
+): number {
+  let best = value
+  let bestDist = threshold
+  for (const guide of guides) {
+    const dist = Math.abs(guide - value)
+    if (dist <= bestDist) {
+      bestDist = dist
+      best = guide
+    }
+  }
+  return best
+}
+
+/**
+ * 对齐自由切线：端点吸附到交叉切线，避免差几像素产生细条碎块
+ * @param width 原图宽
+ * @param height 原图高
+ * @param cuts 原始线段
+ * @param threshold 吸附阈值
+ * @returns 对齐后的线段
+ */
+export function AlignFreeCutSegments(
+  width: number,
+  height: number,
+  cuts: FreeCutSegment[],
+  threshold = 8,
+): FreeCutSegment[] {
+  if (!cuts.length) {
+    return []
+  }
+  const normalized = cuts.map(NormalizeCutSegment)
+  const verticalPosGuides = [
+    0,
+    width,
+    ...normalized.filter((cut) => cut.axis === 'vertical').map((cut) => cut.pos),
+  ]
+  const horizontalPosGuides = [
+    0,
+    height,
+    ...normalized
+      .filter((cut) => cut.axis === 'horizontal')
+      .map((cut) => cut.pos),
+  ]
+
+  return normalized.map((cut) => {
+    if (cut.axis === 'vertical') {
+      const pos = Math.round(
+        Math.min(
+          width - 1,
+          Math.max(1, SnapToGuides(cut.pos, verticalPosGuides, threshold)),
+        ),
+      )
+      const start = Math.round(
+        Math.min(
+          height,
+          Math.max(0, SnapToGuides(cut.start, horizontalPosGuides, threshold)),
+        ),
+      )
+      const end = Math.round(
+        Math.min(
+          height,
+          Math.max(0, SnapToGuides(cut.end, horizontalPosGuides, threshold)),
+        ),
+      )
+      return NormalizeCutSegment({ ...cut, pos, start, end })
+    }
+    const pos = Math.round(
+      Math.min(
+        height - 1,
+        Math.max(1, SnapToGuides(cut.pos, horizontalPosGuides, threshold)),
+      ),
+    )
+    const start = Math.round(
+      Math.min(
+        width,
+        Math.max(0, SnapToGuides(cut.start, verticalPosGuides, threshold)),
+      ),
+    )
+    const end = Math.round(
+      Math.min(
+        width,
+        Math.max(0, SnapToGuides(cut.end, verticalPosGuides, threshold)),
+      ),
+    )
+    return NormalizeCutSegment({ ...cut, pos, start, end })
+  })
+}
+
+/**
+ * 切割时吞掉过小残留边，避免 1px 细条
+ * @param edgeStart 矩形边起点
+ * @param edgeEnd 矩形边终点
+ * @param overlapStart 重叠起点
+ * @param overlapEnd 重叠终点
+ * @param minSize 最小保留尺寸
+ * @returns 调整后的重叠区间
+ */
+function AbsorbMicroOverlap(
+  edgeStart: number,
+  edgeEnd: number,
+  overlapStart: number,
+  overlapEnd: number,
+  minSize = 2,
+): { start: number; end: number } {
+  let start = overlapStart
+  let end = overlapEnd
+  if (start > edgeStart && start - edgeStart < minSize) {
+    start = edgeStart
+  }
+  if (end < edgeEnd && edgeEnd - end < minSize) {
+    end = edgeEnd
+  }
+  return { start, end }
+}
+
+/**
  * 按可调长度线段分割为矩形区域
  * @param width 原图宽
  * @param height 原图高
@@ -827,8 +965,7 @@ export function PartitionRectsBySegments(
   cuts: FreeCutSegment[],
 ): SplitRect[] {
   let rects: SplitRect[] = [{ x: 0, y: 0, width, height }]
-  const sorted = [...cuts]
-    .map(NormalizeCutSegment)
+  const sorted = AlignFreeCutSegments(width, height, cuts)
     .filter((cut) => cut.end - cut.start >= 1)
     .sort((a, b) => a.pos - b.pos || a.start - b.start)
 

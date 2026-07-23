@@ -409,7 +409,7 @@
         <p class="info">
           {{
             mode === 'freeSplit'
-              ? '自由切线：点击添加 · 拖动平移 · 拖端点调长度 · 双击删除'
+              ? '自由切线：点击添加 · 拖动平移 · 拖端点调长度（会吸附到交叉线）· 双击删除'
               : '原图切线示意（与导出切分一致）'
           }}
         </p>
@@ -510,6 +510,7 @@ import {
   GetFreeStitchBounds,
   GetScaledDrawSize,
   GetSplitPreviewCells,
+  AlignFreeCutSegments,
   GetSplitPreviewCellsFromSegments,
   GetStitchCanvasSize,
   LoadImageItemFromFile,
@@ -1541,11 +1542,18 @@ export default defineComponent({
       }
     },
     /**
-     * 结束拖动切线
+     * 结束拖动切线，并将端点吸附到交叉线
      */
     HandleFreeCutPointerUp() {
       this.freeCutDrag = null
       this.DetachFreeCutListeners()
+      if (this.splitItem && this.freeCuts.length) {
+        this.freeCuts = AlignFreeCutSegments(
+          this.splitItem.width,
+          this.splitItem.height,
+          this.freeCuts,
+        )
+      }
       window.setTimeout(() => {
         this.freeCutMoved = false
       }, 0)
