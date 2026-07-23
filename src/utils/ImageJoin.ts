@@ -463,6 +463,58 @@ export function BuildGridSlices(
 }
 
 /**
+ * 计算分割预览单元格（与导出切分一致）
+ * @param width 原图宽
+ * @param height 原图高
+ * @param rows 行数
+ * @param cols 列数
+ * @returns 行优先单元格列表
+ */
+export function GetSplitPreviewCells(
+  width: number,
+  height: number,
+  rows: number,
+  cols: number,
+): Array<{
+  key: string
+  row: number
+  col: number
+  x: number
+  y: number
+  width: number
+  height: number
+}> {
+  const safeRows = Math.min(20, Math.max(1, Math.round(rows)))
+  const safeCols = Math.min(20, Math.max(1, Math.round(cols)))
+  const rowSlices = BuildGridSlices(height, safeRows)
+  const colSlices = BuildGridSlices(width, safeCols)
+  const cells: Array<{
+    key: string
+    row: number
+    col: number
+    x: number
+    y: number
+    width: number
+    height: number
+  }> = []
+
+  for (let r = 0; r < rowSlices.length; r += 1) {
+    for (let c = 0; c < colSlices.length; c += 1) {
+      cells.push({
+        key: `r${r + 1}c${c + 1}`,
+        row: r + 1,
+        col: c + 1,
+        x: colSlices[c].start,
+        y: rowSlices[r].start,
+        width: colSlices[c].size,
+        height: rowSlices[r].size,
+      })
+    }
+  }
+  return cells
+}
+
+/**
  * 单图按行列均等分割
  * @param image 源图
  * @param rows 行数 1~20

@@ -326,14 +326,6 @@
             {{ splitCellWidth }} × {{ splitCellHeight }} px
           </p>
 
-          <div class="grid-preview" :style="gridPreviewStyle">
-            <span
-              v-for="n in splitRows * splitCols"
-              :key="n"
-              class="grid-cell"
-            />
-          </div>
-
           <div class="actions">
             <button
               type="button"
@@ -352,6 +344,62 @@
             <button type="button" class="ghost" :disabled="isBusy" @click="HandleClear">
               清空
             </button>
+          </div>
+        </section>
+
+        <section class="preview-card">
+          <h2>分割预览</h2>
+          <p class="info">原图切线示意（与导出切分一致）</p>
+          <div class="split-source-preview">
+            <div class="split-source-frame" :style="splitSourceFrameStyle">
+              <img
+                :src="splitItem.previewUrl"
+                :alt="splitItem.name"
+                class="split-source-full"
+                draggable="false"
+              />
+              <div
+                v-for="line in splitVerticalLines"
+                :key="`v-${line}`"
+                class="cut-line vertical"
+                :style="{ left: `${line}%` }"
+              />
+              <div
+                v-for="line in splitHorizontalLines"
+                :key="`h-${line}`"
+                class="cut-line horizontal"
+                :style="{ top: `${line}%` }"
+              />
+            </div>
+          </div>
+
+          <p class="info pieces-title">
+            分割后效果（{{ splitPreviewCells.length }} 张）
+          </p>
+          <div class="split-pieces-grid" :style="splitPiecesGridStyle">
+            <div
+              v-for="cell in splitPreviewCells"
+              :key="cell.key"
+              class="split-piece"
+            >
+              <div
+                class="split-piece-thumb"
+                :style="{ aspectRatio: `${cell.width} / ${cell.height}` }"
+              >
+                <img
+                  v-if="splitItem"
+                  :src="splitItem.previewUrl"
+                  alt=""
+                  class="split-piece-img"
+                  draggable="false"
+                  :style="GetSplitPieceImageStyle(cell)"
+                />
+                <span class="piece-label">{{ cell.row }}-{{ cell.col }}</span>
+              </div>
+              <span class="piece-meta">
+                {{ cell.width }} × {{ cell.height }}
+              </span>
+            </div>
           </div>
         </section>
       </template>
@@ -375,6 +423,7 @@ import {
   DownloadBlob,
   GetFreeStitchBounds,
   GetScaledDrawSize,
+  GetSplitPreviewCells,
   GetStitchCanvasSize,
   LoadImageItemFromFile,
   RevokeImageItem,
@@ -504,6 +553,70 @@ export default defineComponent({
       ).height
     },
     /**
+     * 分割预览单元格
+     */
+    splitPreviewCells(): Array<{
+      key: string
+      row: number
+      col: number
+      x: number
+      y: number
+      width: number
+      height: number
+    }> {
+      if (!this.splitItem) {
+        return []
+      }
+      return GetSplitPreviewCells(
+        this.splitItem.width,
+        this.splitItem.height,
+        this.splitRows,
+        this.splitCols,
+      )
+    },
+    /**
+     * 原图预览框比例
+     */
+    splitSourceFrameStyle(): Record<string, string> {
+      if (!this.splitItem || !this.splitItem.width) {
+        return {}
+      }
+      return {
+        aspectRatio: `${this.splitItem.width} / ${this.splitItem.height}`,
+      }
+    },
+    /**
+     * 竖向切线位置（百分比）
+     */
+    splitVerticalLines(): number[] {
+      if (!this.splitItem || this.splitCols <= 1) {
+        return []
+      }
+      return this.splitPreviewCells
+        .filter((cell) => cell.row === 1 && cell.col > 1)
+        .map((cell) => (cell.x / this.splitItem!.width) * 100)
+    },
+    /**
+     * 横向切线位置（百分比）
+     */
+    splitHorizontalLines(): number[] {
+      if (!this.splitItem || this.splitRows <= 1) {
+        return []
+      }
+      const firstCol = this.splitPreviewCells.filter((cell) => cell.col === 1)
+      return firstCol
+        .filter((cell) => cell.row > 1)
+        .map((cell) => (cell.y / this.splitItem!.height) * 100)
+    },
+    /**
+     * 小块宫格布局
+     */
+    splitPiecesGridStyle(): Record<string, string> {
+      return {
+        gridTemplateColumns: `repeat(${this.splitCols}, minmax(0, 1fr))`,
+      }
+    },
+    /**
      * 分割单格约宽
      */
     splitCellWidth(): number {
@@ -521,15 +634,6 @@ export default defineComponent({
       }
       return Math.floor(this.splitItem.height / this.splitRows)
     },
-    /**
-     * 网格示意样式
-     */
-    gridPreviewStyle(): Record<string, string> {
-      return {
-        gridTemplateColumns: `repeat(${this.splitCols}, 1fr)`,
-        gridTemplateRows: `repeat(${this.splitRows}, 1fr)`,
-      }
-    },
   },
   /**
    * 挂载时同步标题
@@ -545,6 +649,29 @@ export default defineComponent({
     this.RevokeAll()
   },
   methods: {
+    /**
+     * 单块预览内图片样式（放大后平移裁切）
+     * @param cell 单元格
+     * @returns style
+     */
+    GetSplitPieceImageStyle(cell: {
+      x: number
+      y: number
+      width: number
+      height: number
+    }): Record<string, string> {
+      if (!this.splitItem) {
+        return {}
+      }
+      const imgW = this.splitItem.width
+      const imgH = this.splitItem.height
+      // translate 百分比相对自身尺寸：按原图比例放大后再移到对应裁区
+      return {
+        width: `${(imgW / cell.width) * 100}%`,
+        height: `${(imgH / cell.height) * 100}%`,
+        transform: `translate(${(-cell.x / imgW) * 100}%, ${(-cell.y / imgH) * 100}%)`,
+      }
+    },
     /**
      * 单项缩放后宽度
      * @param item 拼接项
@@ -1400,21 +1527,101 @@ export default defineComponent({
   font-size: 0.88rem;
 }
 
-.grid-preview {
-  display: grid;
-  gap: 2px;
-  max-width: 320px;
-  aspect-ratio: 4 / 3;
-  margin: 8px 0 12px;
-  padding: 2px;
-  background: rgba(49, 72, 111, 0.2);
-  border-radius: 8px;
-  overflow: hidden;
+.split-source-preview {
+  margin-bottom: 16px;
+  overflow: auto;
 }
 
-.grid-cell {
-  background: rgba(255, 255, 255, 0.85);
-  min-height: 12px;
+.split-source-frame {
+  position: relative;
+  width: min(100%, 520px);
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8edf5;
+  box-shadow: 0 0 0 1px rgba(49, 65, 95, 0.12);
+}
+
+.split-source-full {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.cut-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(255, 248, 239, 0.92);
+  box-shadow: 0 0 0 1px rgba(49, 72, 111, 0.45);
+}
+
+.cut-line.vertical {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.cut-line.horizontal {
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.pieces-title {
+  margin-top: 8px;
+}
+
+.split-pieces-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.split-piece {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.split-piece-thumb {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    linear-gradient(45deg, #e8edf5 25%, transparent 25%) 0 0 / 12px 12px,
+    #f4f7fb;
+  box-shadow: 0 0 0 1px rgba(49, 65, 95, 0.12);
+}
+
+.split-piece-img {
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.piece-label {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(31, 42, 61, 0.72);
+  color: #fff8ef;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.piece-meta {
+  color: #6a7a94;
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .actions {
