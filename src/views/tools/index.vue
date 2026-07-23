@@ -12,36 +12,50 @@
     </header>
 
     <main class="tools-main">
-      <ul class="tool-list">
-        <li v-for="(tool, index) in tools" :key="tool.id">
-          <router-link
-            v-if="tool.available && tool.path"
-            :to="tool.path"
-            class="tool-card"
-            :style="{ animationDelay: `${0.08 * index}s` }"
-          >
-            <div class="tool-head">
-              <h2>{{ tool.name }}</h2>
-              <span class="badge">{{ tool.badge }}</span>
-            </div>
-            <p>{{ tool.description }}</p>
-            <span class="tool-action">进入工具</span>
-          </router-link>
-
-          <div
-            v-else
-            class="tool-card disabled"
-            :style="{ animationDelay: `${0.08 * index}s` }"
-          >
-            <div class="tool-head">
-              <h2>{{ tool.name }}</h2>
-              <span class="badge muted">{{ tool.badge }}</span>
-            </div>
-            <p>{{ tool.description }}</p>
-            <span class="tool-action">敬请期待</span>
+      <section
+        v-for="(group, groupIndex) in toolGroups"
+        :key="group.category.id"
+        class="tool-group"
+      >
+        <header class="group-header">
+          <div>
+            <h2>{{ group.category.name }}</h2>
+            <p>{{ group.category.description }}</p>
           </div>
-        </li>
-      </ul>
+          <span class="group-count">{{ group.tools.length }} 个工具</span>
+        </header>
+
+        <ul class="tool-list">
+          <li v-for="(tool, index) in group.tools" :key="tool.id">
+            <router-link
+              v-if="tool.available && tool.path"
+              :to="tool.path"
+              class="tool-card"
+              :style="{ animationDelay: `${0.06 * (groupIndex * 4 + index)}s` }"
+            >
+              <div class="tool-head">
+                <h3>{{ tool.name }}</h3>
+                <span class="badge">{{ tool.badge }}</span>
+              </div>
+              <p>{{ tool.description }}</p>
+              <span class="tool-action">进入工具</span>
+            </router-link>
+
+            <div
+              v-else
+              class="tool-card disabled"
+              :style="{ animationDelay: `${0.06 * (groupIndex * 4 + index)}s` }"
+            >
+              <div class="tool-head">
+                <h3>{{ tool.name }}</h3>
+                <span class="badge muted">{{ tool.badge }}</span>
+              </div>
+              <p>{{ tool.description }}</p>
+              <span class="tool-action">敬请期待</span>
+            </div>
+          </li>
+        </ul>
+      </section>
     </main>
   </div>
 </template>
@@ -49,11 +63,11 @@
 <script lang="ts">
 /**
  * 工具列表首页
- * 展示可用工具入口，点击跳转到对应页面
+ * 按分类展示可用工具入口
  */
 import { defineComponent } from 'vue'
 import { APPBRAND, APPDESCRIPTION, APPNAME } from '@/utils/Brand'
-import { GetToolList } from '@/utils/ToolList'
+import { GetGroupedToolList } from '@/utils/ToolList'
 
 export default defineComponent({
   name: 'ToolsView',
@@ -61,7 +75,7 @@ export default defineComponent({
     return {
       appBrand: APPBRAND,
       appDescription: APPDESCRIPTION,
-      tools: GetToolList(),
+      toolGroups: GetGroupedToolList(),
     }
   },
   /**
@@ -161,6 +175,51 @@ export default defineComponent({
 .tools-main {
   flex: 1;
   padding: 32px 6vw 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  max-width: 1180px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(49, 65, 95, 0.12);
+}
+
+.group-header h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  color: #1d2a44;
+}
+
+.group-header p {
+  margin: 6px 0 0;
+  color: #5a6a84;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.group-count {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: #6a7a96;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(49, 65, 95, 0.06);
 }
 
 .tool-list {
@@ -170,7 +229,6 @@ export default defineComponent({
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
-  max-width: 1100px;
 }
 
 .tool-card {
@@ -190,6 +248,7 @@ export default defineComponent({
   min-height: 180px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   animation: riseIn 0.55s ease both;
+  box-sizing: border-box;
 }
 
 .tool-card:hover:not(.disabled) {
@@ -210,9 +269,9 @@ export default defineComponent({
   gap: 12px;
 }
 
-.tool-head h2 {
+.tool-head h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 .badge {
@@ -272,6 +331,11 @@ export default defineComponent({
     flex-direction: column;
     align-items: flex-start;
     padding-top: 36px;
+  }
+
+  .group-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

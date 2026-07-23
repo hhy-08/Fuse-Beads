@@ -1,7 +1,17 @@
 /**
  * 工具列表配置模块
- * 定义首页可进入的工具条目
+ * 按类型分组定义首页可进入的工具条目
  */
+
+/** 工具分类 ID */
+export type ToolCategoryId = 'beads' | 'image' | 'office' | 'life'
+
+/** 工具分类 */
+export type ToolCategory = {
+  id: ToolCategoryId
+  name: string
+  description: string
+}
 
 /** 工具条目 */
 export type ToolItem = {
@@ -11,10 +21,46 @@ export type ToolItem = {
   path: string
   available: boolean
   badge: string
+  category: ToolCategoryId
+}
+
+/** 分组后的工具区块 */
+export type ToolGroup = {
+  category: ToolCategory
+  tools: ToolItem[]
 }
 
 /**
- * 获取工具列表
+ * 获取工具分类定义（展示顺序）
+ * @returns 分类列表
+ */
+export function GetToolCategories(): ToolCategory[] {
+  return [
+    {
+      id: 'beads',
+      name: '拼豆配套工具',
+      description: '图纸生成、像素绘制与素材预处理，服务拼豆创作全流程。',
+    },
+    {
+      id: 'image',
+      name: '图片类工具',
+      description: '压缩、水印、格式转换等常见图片处理，全部本地完成。',
+    },
+    {
+      id: 'office',
+      name: '文本 / 日常办公小工具',
+      description: '文件转换、二维码等办公与日常效率工具。',
+    },
+    {
+      id: 'life',
+      name: '趣味 & 生活实用工具',
+      description: '单位换算等轻量实用小工具，随用随开。',
+    },
+  ]
+}
+
+/**
+ * 获取全部工具列表（扁平）
  * @returns 工具条目数组
  */
 export function GetToolList(): ToolItem[] {
@@ -26,6 +72,7 @@ export function GetToolList(): ToolItem[] {
       path: '/generator',
       available: true,
       badge: '可用',
+      category: 'beads',
     },
     {
       id: 'pixel',
@@ -34,6 +81,7 @@ export function GetToolList(): ToolItem[] {
       path: '/pixel-editor',
       available: true,
       badge: '可用',
+      category: 'beads',
     },
     {
       id: 'pixel-scaler',
@@ -42,54 +90,7 @@ export function GetToolList(): ToolItem[] {
       path: '/pixel-scaler',
       available: true,
       badge: '可用',
-    },
-    {
-      id: 'compress',
-      name: '图片压缩工具',
-      description: '支持多图本地压缩，可调质量/缩放/宽高，结果可单下或打包 ZIP。',
-      path: '/image-compress',
-      available: true,
-      badge: '可用',
-    },
-    {
-      id: 'watermark',
-      name: '图片水印工具',
-      description: '多图批量加水印，支持九宫格位置、平铺、旋转、拖动与打包下载。',
-      path: '/watermark',
-      available: true,
-      badge: '可用',
-    },
-    {
-      id: 'converter',
-      name: '图片格式转换',
-      description: '多图转 JPEG / PNG / WebP / GIF，单张直下，多张打包 ZIP。',
-      path: '/image-converter',
-      available: true,
-      badge: '可用',
-    },
-    {
-      id: 'unit',
-      name: '单位转换',
-      description: '长度、重量、面积、体积、温度换算，支持交换单位与转换记录。',
-      path: '/unit-converter',
-      available: true,
-      badge: '可用',
-    },
-    {
-      id: 'file',
-      name: '文件转换',
-      description: '同格式多文件批量转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
-      path: '/file-converter',
-      available: true,
-      badge: '可用',
-    },
-    {
-      id: 'qrcode',
-      name: '二维码生成',
-      description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
-      path: '/qrcode',
-      available: true,
-      badge: '可用',
+      category: 'beads',
     },
     {
       id: 'palette',
@@ -98,6 +99,75 @@ export function GetToolList(): ToolItem[] {
       path: '',
       available: false,
       badge: '即将推出',
+      category: 'beads',
+    },
+    {
+      id: 'compress',
+      name: '图片压缩工具',
+      description: '支持多图本地压缩，可调质量/缩放/宽高，结果可单下或打包 ZIP。',
+      path: '/image-compress',
+      available: true,
+      badge: '可用',
+      category: 'image',
+    },
+    {
+      id: 'watermark',
+      name: '图片水印工具',
+      description: '多图批量加水印，支持九宫格位置、平铺、旋转、拖动与打包下载。',
+      path: '/watermark',
+      available: true,
+      badge: '可用',
+      category: 'image',
+    },
+    {
+      id: 'converter',
+      name: '图片格式转换',
+      description: '多图转 JPEG / PNG / WebP / GIF，单张直下，多张打包 ZIP。',
+      path: '/image-converter',
+      available: true,
+      badge: '可用',
+      category: 'image',
+    },
+    {
+      id: 'file',
+      name: '文件转换',
+      description: '同格式多文件批量转换：PDF→PNG/JPG/TXT，DOCX/XLSX/CSV/JSON 等本地处理。',
+      path: '/file-converter',
+      available: true,
+      badge: '可用',
+      category: 'office',
+    },
+    {
+      id: 'qrcode',
+      name: '二维码生成',
+      description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
+      path: '/qrcode',
+      available: true,
+      badge: '可用',
+      category: 'office',
+    },
+    {
+      id: 'unit',
+      name: '单位转换',
+      description: '长度、重量、面积、体积、温度换算，支持交换单位与转换记录。',
+      path: '/unit-converter',
+      available: true,
+      badge: '可用',
+      category: 'life',
     },
   ]
+}
+
+/**
+ * 按分类分组获取工具列表（空分类不返回）
+ * @returns 分组列表
+ */
+export function GetGroupedToolList(): ToolGroup[] {
+  const tools = GetToolList()
+  return GetToolCategories()
+    .map((category) => ({
+      category,
+      tools: tools.filter((tool) => tool.category === category.id),
+    }))
+    .filter((group) => group.tools.length > 0)
 }
