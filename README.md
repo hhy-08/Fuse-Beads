@@ -223,6 +223,13 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-23（水印工具支持文本文件）
+
+- **会话目的**：图片水印页同时支持 txt / docx 等文本加水印。
+- **完成任务**：上传扩展为图片+文本；docx/txt 等排版为 A4 预览页后复用现有水印绘制与导出。
+- **关键决策**：旧版 .doc 不支持（提示转 docx）；文本先栅格化成页再加水印，与中文 PDF 水印策略一致。
+- **修改文件**：`TextDocumentWatermark.ts`、`watermark/types.ts`、`ImageUploader.vue`、`ImageList.vue`、`watermark/index.vue`、`ToolList.ts`、`README.md`
+
 ### 2026-07-23（PDF 水印支持中文）
 
 - **会话目的**：PDF 水印支持中文显示。

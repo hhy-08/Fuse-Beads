@@ -9,7 +9,7 @@
     >
       <img :src="img.url" class="thumbnail" :alt="img.file.name" />
       <div class="image-info">
-        <span class="image-name">{{ img.file.name }}</span>
+        <span class="image-name">{{ img.displayName || img.file.name }}</span>
         <span class="process-status" :class="img.status">
           {{ ResolveStatusText(img.status) }}
         </span>

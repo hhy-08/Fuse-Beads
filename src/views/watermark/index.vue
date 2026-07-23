@@ -3,8 +3,10 @@
     <header class="hero">
       <div class="hero-copy">
         <p class="brand">{{ appBrand }}</p>
-        <h1>图片水印工具</h1>
-        <p class="subtitle">多图批量加水印，支持位置、平铺、旋转与自由拖动</p>
+        <h1>图片 / 文本水印</h1>
+        <p class="subtitle">
+          图片与 txt / docx 等文本加水印，支持位置、平铺、旋转与自由拖动
+        </p>
       </div>
       <nav class="hero-nav">
         <router-link to="/">工具列表</router-link>
@@ -32,7 +34,7 @@
           :disabled="!currentImage"
           @click="HandleDownloadCurrent"
         >
-          下载当前图片
+          下载当前
         </button>
         <button
           type="button"
@@ -91,8 +93,8 @@
 
 <script lang="ts">
 /**
- * 图片水印工具页
- * 参考 toolbox watermark：多图预览、参数调节、批量处理与 ZIP 下载
+ * 图片 / 文本水印工具页
+ * 图片直接加水印；txt / docx 等先排版成预览页再复用同一套水印
  */
 import { defineComponent, nextTick } from 'vue'
 import JSZip from 'jszip'
@@ -334,7 +336,7 @@ export default defineComponent({
      * @returns 水印后文件名
      */
     BuildDownloadName(fileName: string): string {
-      const base = fileName.replace(/\.[^.]+$/, '') || 'image'
+      const base = fileName.replace(/\.[^.]+$/, '') || 'file'
       return `watermarked_${base}.png`
     },
     /**

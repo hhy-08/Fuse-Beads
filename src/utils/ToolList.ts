@@ -44,7 +44,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'image',
       name: '图片类工具',
-      description: '裁剪、拼接、压缩、水印、格式转换等常见图片处理，全部本地完成。',
+      description: '裁剪、拼接、压缩、水印（含文本）、格式转换等常见图片处理。',
     },
     {
       id: 'office',
@@ -148,8 +148,9 @@ export function GetToolList(): ToolItem[] {
     },
     {
       id: 'watermark',
-      name: '图片水印工具',
-      description: '多图批量加水印，支持九宫格位置、平铺、旋转、拖动与打包下载。',
+      name: '图片 / 文本水印',
+      description:
+        '图片与 txt / docx 等文本加水印，支持九宫格、平铺、旋转、拖动与打包下载。',
       path: '/watermark',
       available: true,
       badge: '可用',

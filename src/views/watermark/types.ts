@@ -5,6 +5,9 @@
 /** 处理状态 */
 export type WatermarkStatus = 'pending' | 'processing' | 'completed' | 'error'
 
+/** 素材类型 */
+export type WatermarkItemKind = 'image' | 'document'
+
 /** 九宫格位置 */
 export type WatermarkPositionId =
   | 'topLeft'
@@ -17,9 +20,12 @@ export type WatermarkPositionId =
   | 'bottomCenter'
   | 'bottomRight'
 
-/** 水印图片项 */
+/** 水印列表项（图片或文本文档排版页） */
 export type WatermarkImageItem = {
   file: File
+  /** 列表展示名（文档多页会带页码） */
+  displayName: string
+  kind: WatermarkItemKind
   url: string
   image: HTMLImageElement
   status: WatermarkStatus
