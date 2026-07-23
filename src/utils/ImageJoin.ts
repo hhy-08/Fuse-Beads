@@ -515,6 +515,485 @@ export function GetSplitPreviewCells(
 }
 
 /**
+ * 由自定义切线生成切片区间（切线为像素位置，不含 0 与 total）
+ * @param total 总长度
+ * @param cuts 切线坐标
+ * @returns 区间列表
+ */
+export function BuildSlicesFromCuts(
+  total: number,
+  cuts: number[],
+): Array<{ start: number; size: number }> {
+  if (total <= 0) {
+    return []
+  }
+  const points = [
+    0,
+    ...cuts
+      .map((cut) => Math.round(cut))
+      .filter((cut) => cut > 0 && cut < total),
+    total,
+  ]
+  const unique = Array.from(new Set(points)).sort((a, b) => a - b)
+  const slices: Array<{ start: number; size: number }> = []
+  for (let i = 0; i < unique.length - 1; i += 1) {
+    const start = unique[i]
+    const end = unique[i + 1]
+    const size = end - start
+    if (size > 0) {
+      slices.push({ start, size })
+    }
+  }
+  if (!slices.length) {
+    return [{ start: 0, size: total }]
+  }
+  return slices
+}
+
+/**
+ * 按自定义横竖切线计算预览单元格
+ * @param width 原图宽
+ * @param height 原图高
+ * @param verticalCuts 竖切线 x 坐标
+ * @param horizontalCuts 横切线 y 坐标
+ * @returns 行优先单元格
+ */
+export function GetSplitPreviewCellsFromCuts(
+  width: number,
+  height: number,
+  verticalCuts: number[],
+  horizontalCuts: number[],
+): Array<{
+  key: string
+  row: number
+  col: number
+  x: number
+  y: number
+  width: number
+  height: number
+}> {
+  const rowSlices = BuildSlicesFromCuts(height, horizontalCuts)
+  const colSlices = BuildSlicesFromCuts(width, verticalCuts)
+  const cells: Array<{
+    key: string
+    row: number
+    col: number
+    x: number
+    y: number
+    width: number
+    height: number
+  }> = []
+
+  for (let r = 0; r < rowSlices.length; r += 1) {
+    for (let c = 0; c < colSlices.length; c += 1) {
+      cells.push({
+        key: `r${r + 1}c${c + 1}`,
+        row: r + 1,
+        col: c + 1,
+        x: colSlices[c].start,
+        y: rowSlices[r].start,
+        width: colSlices[c].size,
+        height: rowSlices[r].size,
+      })
+    }
+  }
+  return cells
+}
+
+/**
+ * 按自定义切线分割图片
+ * @param image 源图
+ * @param verticalCuts 竖切线
+ * @param horizontalCuts 横切线
+ * @param baseName 文件名前缀
+ * @returns 分割结果
+ */
+export async function SplitImageByCuts(
+  image: HTMLImageElement,
+  verticalCuts: number[],
+  horizontalCuts: number[],
+  baseName = 'split',
+): Promise<SplitPiece[]> {
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+  if (!width || !height) {
+    throw new Error('图片尺寸无效')
+  }
+
+  const cells = GetSplitPreviewCellsFromCuts(
+    width,
+    height,
+    verticalCuts,
+    horizontalCuts,
+  )
+  const prefix = baseName.replace(/\.[^.]+$/, '') || 'split'
+  const pieces: SplitPiece[] = []
+
+  for (const cell of cells) {
+    const canvas = document.createElement('canvas')
+    canvas.width = cell.width
+    canvas.height = cell.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('无法创建画布')
+    }
+    ctx.clearRect(0, 0, cell.width, cell.height)
+    ctx.drawImage(
+      image,
+      cell.x,
+      cell.y,
+      cell.width,
+      cell.height,
+      0,
+      0,
+      cell.width,
+      cell.height,
+    )
+    const blob = await CanvasToPngBlob(canvas)
+    pieces.push({
+      blob,
+      fileName: `${prefix}_r${cell.row}_c${cell.col}.png`,
+      width: cell.width,
+      height: cell.height,
+      row: cell.row,
+      col: cell.col,
+    })
+  }
+
+  return pieces
+}
+
+/** 自由分割线段：可指定起止长度，不必贯穿整图 */
+export type FreeCutSegment = {
+  uid: string
+  axis: 'vertical' | 'horizontal'
+  /** 竖线为 x，横线为 y */
+  pos: number
+  /** 竖线为 y 起点，横线为 x 起点 */
+  start: number
+  /** 竖线为 y 终点，横线为 x 终点 */
+  end: number
+}
+
+/** 分割矩形区域 */
+export type SplitRect = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * 用一条竖线段切割矩形列表
+ * @param rects 当前矩形
+ * @param x 竖线 x
+ * @param yStart 竖线起点 y
+ * @param yEnd 竖线终点 y
+ * @returns 切割后矩形
+ */
+function SplitRectsByVerticalSegment(
+  rects: SplitRect[],
+  x: number,
+  yStart: number,
+  yEnd: number,
+): SplitRect[] {
+  const next: SplitRect[] = []
+  for (const rect of rects) {
+    const overlapStart = Math.max(rect.y, yStart)
+    const overlapEnd = Math.min(rect.y + rect.height, yEnd)
+    const canSplit =
+      x > rect.x &&
+      x < rect.x + rect.width &&
+      overlapEnd - overlapStart >= 1
+
+    if (!canSplit) {
+      next.push(rect)
+      continue
+    }
+
+    if (overlapStart > rect.y) {
+      next.push({
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: overlapStart - rect.y,
+      })
+    }
+    next.push({
+      x: rect.x,
+      y: overlapStart,
+      width: x - rect.x,
+      height: overlapEnd - overlapStart,
+    })
+    next.push({
+      x: x,
+      y: overlapStart,
+      width: rect.x + rect.width - x,
+      height: overlapEnd - overlapStart,
+    })
+    if (overlapEnd < rect.y + rect.height) {
+      next.push({
+        x: rect.x,
+        y: overlapEnd,
+        width: rect.width,
+        height: rect.y + rect.height - overlapEnd,
+      })
+    }
+  }
+  return next.filter((item) => item.width >= 1 && item.height >= 1)
+}
+
+/**
+ * 用一条横线段切割矩形列表
+ * @param rects 当前矩形
+ * @param y 横线 y
+ * @param xStart 横线起点 x
+ * @param xEnd 横线终点 x
+ * @returns 切割后矩形
+ */
+function SplitRectsByHorizontalSegment(
+  rects: SplitRect[],
+  y: number,
+  xStart: number,
+  xEnd: number,
+): SplitRect[] {
+  const next: SplitRect[] = []
+  for (const rect of rects) {
+    const overlapStart = Math.max(rect.x, xStart)
+    const overlapEnd = Math.min(rect.x + rect.width, xEnd)
+    const canSplit =
+      y > rect.y &&
+      y < rect.y + rect.height &&
+      overlapEnd - overlapStart >= 1
+
+    if (!canSplit) {
+      next.push(rect)
+      continue
+    }
+
+    if (overlapStart > rect.x) {
+      next.push({
+        x: rect.x,
+        y: rect.y,
+        width: overlapStart - rect.x,
+        height: rect.height,
+      })
+    }
+    next.push({
+      x: overlapStart,
+      y: rect.y,
+      width: overlapEnd - overlapStart,
+      height: y - rect.y,
+    })
+    next.push({
+      x: overlapStart,
+      y: y,
+      width: overlapEnd - overlapStart,
+      height: rect.y + rect.height - y,
+    })
+    if (overlapEnd < rect.x + rect.width) {
+      next.push({
+        x: overlapEnd,
+        y: rect.y,
+        width: rect.x + rect.width - overlapEnd,
+        height: rect.height,
+      })
+    }
+  }
+  return next.filter((item) => item.width >= 1 && item.height >= 1)
+}
+
+/**
+ * 规范化线段起止，保证 start < end
+ * @param cut 原始线段
+ * @returns 规范化线段
+ */
+function NormalizeCutSegment(cut: FreeCutSegment): FreeCutSegment {
+  const start = Math.min(cut.start, cut.end)
+  const end = Math.max(cut.start, cut.end)
+  return { ...cut, start, end }
+}
+
+/**
+ * 按可调长度线段分割为矩形区域
+ * @param width 原图宽
+ * @param height 原图高
+ * @param cuts 线段列表
+ * @returns 区域列表
+ */
+export function PartitionRectsBySegments(
+  width: number,
+  height: number,
+  cuts: FreeCutSegment[],
+): SplitRect[] {
+  let rects: SplitRect[] = [{ x: 0, y: 0, width, height }]
+  const sorted = [...cuts]
+    .map(NormalizeCutSegment)
+    .filter((cut) => cut.end - cut.start >= 1)
+    .sort((a, b) => a.pos - b.pos || a.start - b.start)
+
+  for (const cut of sorted) {
+    if (cut.axis === 'vertical') {
+      const x = Math.round(Math.min(Math.max(cut.pos, 1), width - 1))
+      const yStart = Math.round(Math.min(Math.max(cut.start, 0), height))
+      const yEnd = Math.round(Math.min(Math.max(cut.end, 0), height))
+      if (yEnd - yStart < 1) continue
+      rects = SplitRectsByVerticalSegment(rects, x, yStart, yEnd)
+    } else {
+      const y = Math.round(Math.min(Math.max(cut.pos, 1), height - 1))
+      const xStart = Math.round(Math.min(Math.max(cut.start, 0), width))
+      const xEnd = Math.round(Math.min(Math.max(cut.end, 0), width))
+      if (xEnd - xStart < 1) continue
+      rects = SplitRectsByHorizontalSegment(rects, y, xStart, xEnd)
+    }
+  }
+  return rects
+}
+
+/**
+ * 为矩形分配大致行列号并生成单元格
+ * @param rects 矩形列表
+ * @returns 预览单元格
+ */
+function MapRectsToCells(
+  rects: SplitRect[],
+): Array<{
+  key: string
+  row: number
+  col: number
+  x: number
+  y: number
+  width: number
+  height: number
+}> {
+  const sorted = [...rects].sort((a, b) => a.y - b.y || a.x - b.x)
+  const yKeys = Array.from(new Set(sorted.map((item) => item.y))).sort(
+    (a, b) => a - b,
+  )
+  const xKeys = Array.from(new Set(sorted.map((item) => item.x))).sort(
+    (a, b) => a - b,
+  )
+  const FindNearestIndex = (keys: number[], value: number): number => {
+    let best = 0
+    let bestDist = Number.POSITIVE_INFINITY
+    for (let i = 0; i < keys.length; i += 1) {
+      const dist = Math.abs(keys[i] - value)
+      if (dist < bestDist) {
+        bestDist = dist
+        best = i
+      }
+    }
+    return best
+  }
+
+  return sorted.map((rect, index) => {
+    const row = FindNearestIndex(yKeys, rect.y) + 1
+    const col = FindNearestIndex(xKeys, rect.x) + 1
+    return {
+      key: `p${index + 1}_r${row}c${col}`,
+      row,
+      col,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    }
+  })
+}
+
+/**
+ * 按可调长度线段计算预览单元格
+ * @param width 原图宽
+ * @param height 原图高
+ * @param cuts 线段列表
+ * @returns 单元格列表
+ */
+export function GetSplitPreviewCellsFromSegments(
+  width: number,
+  height: number,
+  cuts: FreeCutSegment[],
+): Array<{
+  key: string
+  row: number
+  col: number
+  x: number
+  y: number
+  width: number
+  height: number
+}> {
+  if (!cuts.length) {
+    return [
+      {
+        key: 'r1c1',
+        row: 1,
+        col: 1,
+        x: 0,
+        y: 0,
+        width,
+        height,
+      },
+    ]
+  }
+  return MapRectsToCells(PartitionRectsBySegments(width, height, cuts))
+}
+
+/**
+ * 按可调长度线段分割图片
+ * @param image 源图
+ * @param cuts 线段列表
+ * @param baseName 文件名前缀
+ * @returns 分割结果
+ */
+export async function SplitImageBySegments(
+  image: HTMLImageElement,
+  cuts: FreeCutSegment[],
+  baseName = 'split',
+): Promise<SplitPiece[]> {
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+  if (!width || !height) {
+    throw new Error('图片尺寸无效')
+  }
+
+  const cells = GetSplitPreviewCellsFromSegments(width, height, cuts)
+  const prefix = baseName.replace(/\.[^.]+$/, '') || 'split'
+  const pieces: SplitPiece[] = []
+
+  for (const cell of cells) {
+    const canvas = document.createElement('canvas')
+    canvas.width = cell.width
+    canvas.height = cell.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('无法创建画布')
+    }
+    ctx.clearRect(0, 0, cell.width, cell.height)
+    ctx.drawImage(
+      image,
+      cell.x,
+      cell.y,
+      cell.width,
+      cell.height,
+      0,
+      0,
+      cell.width,
+      cell.height,
+    )
+    const blob = await CanvasToPngBlob(canvas)
+    pieces.push({
+      blob,
+      fileName: `${prefix}_${cell.key}.png`,
+      width: cell.width,
+      height: cell.height,
+      row: cell.row,
+      col: cell.col,
+    })
+  }
+
+  return pieces
+}
+
+/**
  * 单图按行列均等分割
  * @param image 源图
  * @param rows 行数 1~20

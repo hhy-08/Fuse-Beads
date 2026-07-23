@@ -5,7 +5,7 @@
         <p class="brand">{{ appBrand }}</p>
         <h1>长图拼接 / 图片分割</h1>
         <p class="subtitle">
-          多张图竖向拼成长图，或将大图按行列均等切成小图，全部本地完成
+          多张图拼接成长图，或均等 / 自由分割大图，全部本地完成
         </p>
       </div>
       <nav class="hero-nav">
@@ -31,6 +31,14 @@
           @click="HandleModeChange('split')"
         >
           均等分割
+        </button>
+        <button
+          type="button"
+          class="tab"
+          :class="{ active: mode === 'freeSplit' }"
+          @click="HandleModeChange('freeSplit')"
+        >
+          自由分割
         </button>
       </section>
 
@@ -275,134 +283,212 @@
         </section>
       </template>
 
-      <!-- 分割模式 -->
-      <template v-if="mode === 'split' && splitItem">
-        <section class="options-card">
-          <h2>分割参数</h2>
-          <div class="split-source">
+      <!-- 分割模式（均等 / 自由） -->
+      <section v-if="isSplitView && splitItem" class="options-card">
+        <h2>{{ mode === 'freeSplit' ? '自由分割参数' : '均等分割参数' }}</h2>
+        <div class="split-source">
+          <img
+            :src="splitItem.previewUrl"
+            :alt="splitItem.name"
+            class="source-thumb"
+          />
+          <div class="file-meta">
+            <span class="name">{{ splitItem.name }}</span>
+            <span class="size">
+              {{ splitItem.width }} × {{ splitItem.height }}
+            </span>
+          </div>
+          <button type="button" class="ghost mini" @click="HandleClear">
+            更换
+          </button>
+        </div>
+
+        <div v-if="mode === 'split'" class="options-grid">
+          <label class="field">
+            <span>行数 {{ splitRows }}</span>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              step="1"
+              :value="splitRows"
+              @input="HandleRowsInput"
+            />
+          </label>
+          <label class="field">
+            <span>列数 {{ splitCols }}</span>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              step="1"
+              :value="splitCols"
+              @input="HandleColsInput"
+            />
+          </label>
+        </div>
+
+        <div v-else class="free-split-tools">
+          <div class="align-group">
+            <span class="align-label">点击添加</span>
+            <button
+              type="button"
+              class="mode-chip"
+              :class="{ active: freeCutTool === 'vertical' }"
+              @click="HandleFreeCutTool('vertical')"
+            >
+              竖线
+            </button>
+            <button
+              type="button"
+              class="mode-chip"
+              :class="{ active: freeCutTool === 'horizontal' }"
+              @click="HandleFreeCutTool('horizontal')"
+            >
+              横线
+            </button>
+          </div>
+          <p class="info">
+            点击预览添加切线；拖动线条平移，拖两端圆点调整长度，双击删除。当前
+            {{ freeVerticalCutCount }} 条竖线 ·
+            {{ freeHorizontalCutCount }} 条横线 · 共
+            {{ splitPreviewCells.length }} 块
+          </p>
+          <div class="batch-row">
+            <button type="button" class="ghost mini" @click="HandleClearFreeCuts">
+              清空切线
+            </button>
+          </div>
+        </div>
+
+        <div class="align-group cut-color-row">
+          <span class="align-label">切线颜色</span>
+          <button
+            v-for="opt in cutLineColorOptions"
+            :key="opt.id"
+            type="button"
+            class="color-chip"
+            :class="{ active: cutLineColor === opt.value }"
+            :style="{ '--chip-color': opt.value }"
+            :title="opt.label"
+            @click="HandleCutLineColor(opt.value)"
+          >
+            <span class="color-dot" />
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <p v-if="mode === 'split'" class="info">
+          将切成 {{ splitRows * splitCols }} 张 · 单格约
+          {{ splitCellWidth }} × {{ splitCellHeight }} px
+        </p>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="primary"
+            :disabled="isBusy || splitPreviewCells.length < 1"
+            @click="HandleSplitDownload"
+          >
+            {{
+              isBusy
+                ? '处理中…'
+                : splitPreviewCells.length > 1
+                  ? `分割并打包 ZIP（${splitPreviewCells.length} 张）`
+                  : '分割并下载 PNG'
+            }}
+          </button>
+          <button type="button" class="ghost" :disabled="isBusy" @click="HandleClear">
+            清空
+          </button>
+        </div>
+      </section>
+
+      <section v-if="isSplitView && splitItem" class="preview-card">
+        <h2>分割预览</h2>
+        <p class="info">
+          {{
+            mode === 'freeSplit'
+              ? '自由切线：点击添加 · 拖动平移 · 拖端点调长度 · 双击删除'
+              : '原图切线示意（与导出切分一致）'
+          }}
+        </p>
+        <div class="split-source-preview">
+          <div
+            ref="splitFrameRef"
+            class="split-source-frame"
+            :class="{ interactive: mode === 'freeSplit' }"
+            :style="splitSourceFrameStyle"
+            @click="HandleFreeSplitClick"
+          >
             <img
               :src="splitItem.previewUrl"
               :alt="splitItem.name"
-              class="source-thumb"
+              class="split-source-full"
+              draggable="false"
             />
-            <div class="file-meta">
-              <span class="name">{{ splitItem.name }}</span>
-              <span class="size">
-                {{ splitItem.width }} × {{ splitItem.height }}
-              </span>
-            </div>
-            <button type="button" class="ghost mini" @click="HandleClear">
-              更换
-            </button>
-          </div>
-
-          <div class="options-grid">
-            <label class="field">
-              <span>行数 {{ splitRows }}</span>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                step="1"
-                :value="splitRows"
-                @input="HandleRowsInput"
-              />
-            </label>
-            <label class="field">
-              <span>列数 {{ splitCols }}</span>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                step="1"
-                :value="splitCols"
-                @input="HandleColsInput"
-              />
-            </label>
-          </div>
-
-          <p class="info">
-            将切成 {{ splitRows * splitCols }} 张 · 单格约
-            {{ splitCellWidth }} × {{ splitCellHeight }} px
-          </p>
-
-          <div class="actions">
-            <button
-              type="button"
-              class="primary"
-              :disabled="isBusy"
-              @click="HandleSplitDownload"
-            >
-              {{
-                isBusy
-                  ? '处理中…'
-                  : splitRows * splitCols > 1
-                    ? `分割并打包 ZIP（${splitRows * splitCols} 张）`
-                    : '分割并下载 PNG'
-              }}
-            </button>
-            <button type="button" class="ghost" :disabled="isBusy" @click="HandleClear">
-              清空
-            </button>
-          </div>
-        </section>
-
-        <section class="preview-card">
-          <h2>分割预览</h2>
-          <p class="info">原图切线示意（与导出切分一致）</p>
-          <div class="split-source-preview">
-            <div class="split-source-frame" :style="splitSourceFrameStyle">
-              <img
-                :src="splitItem.previewUrl"
-                :alt="splitItem.name"
-                class="split-source-full"
-                draggable="false"
-              />
-              <div
-                v-for="line in splitVerticalLines"
-                :key="`v-${line}`"
-                class="cut-line vertical"
-                :style="{ left: `${line}%` }"
-              />
-              <div
-                v-for="line in splitHorizontalLines"
-                :key="`h-${line}`"
-                class="cut-line horizontal"
-                :style="{ top: `${line}%` }"
-              />
-            </div>
-          </div>
-
-          <p class="info pieces-title">
-            分割后效果（{{ splitPreviewCells.length }} 张）
-          </p>
-          <div class="split-pieces-grid" :style="splitPiecesGridStyle">
             <div
-              v-for="cell in splitPreviewCells"
-              :key="cell.key"
-              class="split-piece"
+              v-for="(line, index) in splitVerticalLineMarks"
+              :key="`v-${index}-${line.pos}`"
+              class="cut-line vertical"
+              :style="GetCutLineStyle('vertical', line.percent)"
+            />
+            <div
+              v-for="(line, index) in splitHorizontalLineMarks"
+              :key="`h-${index}-${line.pos}`"
+              class="cut-line horizontal"
+              :style="GetCutLineStyle('horizontal', line.percent)"
+            />
+            <div
+              v-for="cut in freeCuts"
+              :key="cut.uid"
+              class="cut-line segment draggable"
+              :class="cut.axis"
+              :style="GetFreeCutSegmentStyle(cut)"
+              @pointerdown.stop="HandleFreeCutPointerDown($event, cut.uid, 'move')"
+              @dblclick.stop="HandleFreeCutRemove(cut.uid)"
             >
-              <div
-                class="split-piece-thumb"
-                :style="{ aspectRatio: `${cell.width} / ${cell.height}` }"
-              >
-                <img
-                  v-if="splitItem"
-                  :src="splitItem.previewUrl"
-                  alt=""
-                  class="split-piece-img"
-                  draggable="false"
-                  :style="GetSplitPieceImageStyle(cell)"
-                />
-                <span class="piece-label">{{ cell.row }}-{{ cell.col }}</span>
-              </div>
-              <span class="piece-meta">
-                {{ cell.width }} × {{ cell.height }}
-              </span>
+              <span
+                class="cut-handle start"
+                @pointerdown.stop="HandleFreeCutPointerDown($event, cut.uid, 'start')"
+              />
+              <span
+                class="cut-handle end"
+                @pointerdown.stop="HandleFreeCutPointerDown($event, cut.uid, 'end')"
+              />
             </div>
           </div>
-        </section>
-      </template>
+        </div>
+
+        <p class="info pieces-title">
+          分割后效果（{{ splitPreviewCells.length }} 张）
+        </p>
+        <div class="split-pieces-grid" :style="splitPiecesGridStyle">
+          <div
+            v-for="cell in splitPreviewCells"
+            :key="cell.key"
+            class="split-piece"
+          >
+            <div
+              class="split-piece-thumb"
+              :style="{ aspectRatio: `${cell.width} / ${cell.height}` }"
+            >
+              <img
+                v-if="splitItem"
+                :src="splitItem.previewUrl"
+                alt=""
+                class="split-piece-img"
+                draggable="false"
+                :style="GetSplitPieceImageStyle(cell)"
+              />
+              <span class="piece-label">{{ cell.row }}-{{ cell.col }}</span>
+            </div>
+            <span class="piece-meta">
+              {{ cell.width }} × {{ cell.height }}
+            </span>
+          </div>
+        </div>
+      </section>
 
       <p v-if="statusText" class="status" :class="{ error: hasError }">
         {{ statusText }}
@@ -424,13 +510,16 @@ import {
   GetFreeStitchBounds,
   GetScaledDrawSize,
   GetSplitPreviewCells,
+  GetSplitPreviewCellsFromSegments,
   GetStitchCanvasSize,
   LoadImageItemFromFile,
   RevokeImageItem,
+  SplitImageBySegments,
   SplitImageGrid,
   StitchImagesFree,
   StitchImagesVertical,
   ZipSplitPieces,
+  type FreeCutSegment,
   type LoadedImageItem,
   type StitchAlign,
   type StitchLayer,
@@ -439,8 +528,22 @@ import FreeLayoutCanvas from './components/FreeLayoutCanvas.vue'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024
 
-type ToolMode = 'stitch' | 'split'
+type ToolMode = 'stitch' | 'split' | 'freeSplit'
 type LayoutMode = 'auto' | 'free'
+type FreeCutTool = 'vertical' | 'horizontal'
+type FreeCutAxis = 'vertical' | 'horizontal'
+
+type FreeCutDragMode = 'move' | 'start' | 'end'
+
+type FreeCutDrag = {
+  uid: string
+  mode: FreeCutDragMode
+  startClientX: number
+  startClientY: number
+  originPos: number
+  originStart: number
+  originEnd: number
+}
 
 /** 拼接列表项（含缩放、对齐与自由坐标） */
 type StitchItem = LoadedImageItem & {
@@ -474,6 +577,20 @@ export default defineComponent({
       splitItem: null as LoadedImageItem | null,
       splitRows: 2,
       splitCols: 2,
+      freeCutTool: 'vertical' as FreeCutTool,
+      freeCuts: [] as FreeCutSegment[],
+      freeCutDrag: null as FreeCutDrag | null,
+      freeCutMoved: false,
+      cutLineColor: '#00e5ff',
+      cutLineColorOptions: [
+        { id: 'cyan', value: '#00e5ff', label: '青' },
+        { id: 'red', value: '#ff3b30', label: '红' },
+        { id: 'yellow', value: '#ffd60a', label: '黄' },
+        { id: 'lime', value: '#30d158', label: '绿' },
+        { id: 'magenta', value: '#ff2d55', label: '粉' },
+        { id: 'orange', value: '#ff9f0a', label: '橙' },
+        { id: 'white', value: '#ffffff', label: '白' },
+      ],
       alignOptions: [
         { id: 'left' as StitchAlign, label: '左' },
         { id: 'center' as StitchAlign, label: '中' },
@@ -487,6 +604,12 @@ export default defineComponent({
     }
   },
   computed: {
+    /**
+     * 是否处于分割相关视图
+     */
+    isSplitView(): boolean {
+      return this.mode === 'split' || this.mode === 'freeSplit'
+    },
     /**
      * 单项对齐文案（单列=左右，多列=上下）
      */
@@ -553,7 +676,7 @@ export default defineComponent({
       ).height
     },
     /**
-     * 分割预览单元格
+     * 分割预览单元格（均等或自由）
      */
     splitPreviewCells(): Array<{
       key: string
@@ -566,6 +689,13 @@ export default defineComponent({
     }> {
       if (!this.splitItem) {
         return []
+      }
+      if (this.mode === 'freeSplit') {
+        return GetSplitPreviewCellsFromSegments(
+          this.splitItem.width,
+          this.splitItem.height,
+          this.freeCuts,
+        )
       }
       return GetSplitPreviewCells(
         this.splitItem.width,
@@ -586,34 +716,52 @@ export default defineComponent({
       }
     },
     /**
-     * 竖向切线位置（百分比）
+     * 竖切线标记
      */
-    splitVerticalLines(): number[] {
-      if (!this.splitItem || this.splitCols <= 1) {
+    freeVerticalCutCount(): number {
+      return this.freeCuts.filter((cut) => cut.axis === 'vertical').length
+    },
+    freeHorizontalCutCount(): number {
+      return this.freeCuts.filter((cut) => cut.axis === 'horizontal').length
+    },
+    splitVerticalLineMarks(): Array<{ pos: number; percent: number }> {
+      if (!this.splitItem || this.mode === 'freeSplit') {
         return []
       }
       return this.splitPreviewCells
         .filter((cell) => cell.row === 1 && cell.col > 1)
-        .map((cell) => (cell.x / this.splitItem!.width) * 100)
+        .map((cell) => ({
+          pos: cell.x,
+          percent: (cell.x / this.splitItem!.width) * 100,
+        }))
     },
     /**
-     * 横向切线位置（百分比）
+     * 横切线标记
      */
-    splitHorizontalLines(): number[] {
-      if (!this.splitItem || this.splitRows <= 1) {
+    splitHorizontalLineMarks(): Array<{ pos: number; percent: number }> {
+      if (!this.splitItem || this.mode === 'freeSplit') {
         return []
       }
-      const firstCol = this.splitPreviewCells.filter((cell) => cell.col === 1)
-      return firstCol
-        .filter((cell) => cell.row > 1)
-        .map((cell) => (cell.y / this.splitItem!.height) * 100)
+      return this.splitPreviewCells
+        .filter((cell) => cell.col === 1 && cell.row > 1)
+        .map((cell) => ({
+          pos: cell.y,
+          percent: (cell.y / this.splitItem!.height) * 100,
+        }))
     },
     /**
-     * 小块宫格布局
+     * 小块宫格列数
      */
     splitPiecesGridStyle(): Record<string, string> {
+      const cols =
+        this.mode === 'freeSplit'
+          ? Math.max(
+              1,
+              new Set(this.splitPreviewCells.map((cell) => cell.col)).size,
+            )
+          : this.splitCols
       return {
-        gridTemplateColumns: `repeat(${this.splitCols}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
       }
     },
     /**
@@ -646,6 +794,7 @@ export default defineComponent({
    */
   beforeUnmount() {
     this.ClearPreviewTimer()
+    this.DetachFreeCutListeners()
     this.RevokeAll()
   },
   methods: {
@@ -771,11 +920,13 @@ export default defineComponent({
       }
       this.mode = mode
       this.HandleClear()
-      this.SetStatus(
-        mode === 'stitch'
-          ? '已切换到图片拼接（自动网格或自由拖放）'
-          : '已切换到均等分割（请上传单张大图）',
-      )
+      if (mode === 'stitch') {
+        this.SetStatus('已切换到图片拼接（自动网格或自由拖放）')
+      } else if (mode === 'freeSplit') {
+        this.SetStatus('已切换到自由分割（点击添加，拖端点可只切上半部分）')
+      } else {
+        this.SetStatus('已切换到均等分割（请上传单张大图）')
+      }
     },
     /**
      * 切换自动 / 自由布局
@@ -900,10 +1051,13 @@ export default defineComponent({
             RevokeImageItem(this.splitItem)
           }
           this.splitItem = await LoadImageItemFromFile(file)
+          this.freeCuts = []
           this.SetStatus(
             rejected.length
               ? `已加载；其余超限已忽略：${rejected.join('、')}`
-              : '图片已加载，设置行列后分割',
+              : this.mode === 'freeSplit'
+                ? '图片已加载，点击预览添加切线'
+                : '图片已加载，设置行列后分割',
             rejected.length > 0,
           )
         }
@@ -1100,10 +1254,310 @@ export default defineComponent({
       this.splitCols = Number((event.target as HTMLInputElement).value)
     },
     /**
+     * 切换自由切线工具
+     * @param tool 竖线或横线
+     */
+    HandleFreeCutTool(tool: FreeCutTool) {
+      this.freeCutTool = tool
+    },
+    /**
+     * 设置切线颜色
+     * @param color 颜色值
+     */
+    HandleCutLineColor(color: string) {
+      this.cutLineColor = color
+    },
+    /**
+     * 切线样式（位置 + 颜色）
+     * @param axis 轴向
+     * @param percent 百分比位置
+     * @returns style
+     */
+    GetCutLineStyle(
+      axis: FreeCutAxis,
+      percent: number,
+    ): Record<string, string> {
+      const style: Record<string, string> = {
+        '--cut-color': this.cutLineColor,
+      }
+      if (axis === 'vertical') {
+        style.left = `${percent}%`
+      } else {
+        style.top = `${percent}%`
+      }
+      return style
+    },
+    /**
+     * 自由切线段样式（位置 + 起止长度）
+     * @param cut 线段
+     * @returns style
+     */
+    GetFreeCutSegmentStyle(cut: FreeCutSegment): Record<string, string> {
+      if (!this.splitItem) {
+        return { '--cut-color': this.cutLineColor }
+      }
+      const start = Math.min(cut.start, cut.end)
+      const end = Math.max(cut.start, cut.end)
+      const style: Record<string, string> = {
+        '--cut-color': this.cutLineColor,
+      }
+      if (cut.axis === 'vertical') {
+        const height = this.splitItem.height || 1
+        style.left = `${(cut.pos / this.splitItem.width) * 100}%`
+        style.top = `${(start / height) * 100}%`
+        style.height = `${((end - start) / height) * 100}%`
+      } else {
+        const width = this.splitItem.width || 1
+        style.top = `${(cut.pos / this.splitItem.height) * 100}%`
+        style.left = `${(start / width) * 100}%`
+        style.width = `${((end - start) / width) * 100}%`
+      }
+      return style
+    },
+    /**
+     * 生成切线唯一 id
+     * @returns uid
+     */
+    CreateCutUid(): string {
+      return `cut-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    },
+    /**
+     * 清空自由切线
+     */
+    HandleClearFreeCuts() {
+      this.freeCuts = []
+      this.SetStatus('已清空自由切线')
+    },
+    /**
+     * 点击预览添加切线
+     * @param event 点击事件
+     */
+    HandleFreeSplitClick(event: MouseEvent) {
+      if (this.mode !== 'freeSplit' || !this.splitItem || this.freeCutMoved) {
+        this.freeCutMoved = false
+        return
+      }
+      const frame = this.$refs.splitFrameRef as HTMLElement | undefined
+      if (!frame) {
+        return
+      }
+      const rect = frame.getBoundingClientRect()
+      if (!rect.width || !rect.height) {
+        return
+      }
+      const relX = (event.clientX - rect.left) / rect.width
+      const relY = (event.clientY - rect.top) / rect.height
+      if (this.freeCutTool === 'vertical') {
+        const x = Math.round(relX * this.splitItem.width)
+        this.AddFreeCut('vertical', x)
+      } else {
+        const y = Math.round(relY * this.splitItem.height)
+        this.AddFreeCut('horizontal', y)
+      }
+    },
+    /**
+     * 添加一条切线（默认贯穿整图，可拖端点缩短）
+     * @param axis 轴向
+     * @param pos 像素位置
+     */
+    AddFreeCut(axis: FreeCutAxis, pos: number) {
+      if (!this.splitItem) {
+        return
+      }
+      const maxPos =
+        axis === 'vertical' ? this.splitItem.width : this.splitItem.height
+      const maxLen =
+        axis === 'vertical' ? this.splitItem.height : this.splitItem.width
+      const clamped = Math.min(maxPos - 1, Math.max(1, Math.round(pos)))
+      const near = this.freeCuts.some(
+        (cut) =>
+          cut.axis === axis &&
+          Math.abs(cut.pos - clamped) < 2 &&
+          cut.start <= 1 &&
+          cut.end >= maxLen - 1,
+      )
+      if (near) {
+        return
+      }
+      this.freeCuts = [
+        ...this.freeCuts,
+        {
+          uid: this.CreateCutUid(),
+          axis,
+          pos: clamped,
+          start: 0,
+          end: maxLen,
+        },
+      ]
+    },
+    /**
+     * 删除切线
+     * @param uid 切线 id
+     */
+    HandleFreeCutRemove(uid: string) {
+      if (this.mode !== 'freeSplit') {
+        return
+      }
+      this.freeCuts = this.freeCuts.filter((cut) => cut.uid !== uid)
+    },
+    /**
+     * 按 uid 更新切线
+     * @param uid 切线 id
+     * @param patch 局部字段
+     */
+    PatchFreeCut(uid: string, patch: Partial<FreeCutSegment>) {
+      this.freeCuts = this.freeCuts.map((cut) =>
+        cut.uid === uid ? { ...cut, ...patch } : cut,
+      )
+    },
+    /**
+     * 开始拖动切线或端点
+     * @param event 指针事件
+     * @param uid 切线 id
+     * @param mode 拖动模式
+     */
+    HandleFreeCutPointerDown(
+      event: PointerEvent,
+      uid: string,
+      mode: FreeCutDragMode,
+    ) {
+      if (this.mode !== 'freeSplit' || !this.splitItem) {
+        return
+      }
+      const cut = this.freeCuts.find((item) => item.uid === uid)
+      if (!cut) {
+        return
+      }
+      event.preventDefault()
+      this.freeCutMoved = false
+      this.freeCutDrag = {
+        uid,
+        mode,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        originPos: cut.pos,
+        originStart: Math.min(cut.start, cut.end),
+        originEnd: Math.max(cut.start, cut.end),
+      }
+      this.AttachFreeCutListeners()
+    },
+    /**
+     * 绑定切线拖动监听
+     */
+    AttachFreeCutListeners() {
+      window.addEventListener('pointermove', this.HandleFreeCutPointerMove)
+      window.addEventListener('pointerup', this.HandleFreeCutPointerUp)
+      window.addEventListener('pointercancel', this.HandleFreeCutPointerUp)
+    },
+    /**
+     * 解绑切线拖动监听
+     */
+    DetachFreeCutListeners() {
+      window.removeEventListener('pointermove', this.HandleFreeCutPointerMove)
+      window.removeEventListener('pointerup', this.HandleFreeCutPointerUp)
+      window.removeEventListener('pointercancel', this.HandleFreeCutPointerUp)
+    },
+    /**
+     * 拖动切线平移或调整端点长度
+     * @param event 指针事件
+     */
+    HandleFreeCutPointerMove(event: PointerEvent) {
+      if (!this.freeCutDrag || !this.splitItem) {
+        return
+      }
+      const frame = this.$refs.splitFrameRef as HTMLElement | undefined
+      if (!frame) {
+        return
+      }
+      const rect = frame.getBoundingClientRect()
+      if (!rect.width || !rect.height) {
+        return
+      }
+      const drag = this.freeCutDrag
+      const cut = this.freeCuts.find((item) => item.uid === drag.uid)
+      if (!cut) {
+        return
+      }
+      const deltaX = event.clientX - drag.startClientX
+      const deltaY = event.clientY - drag.startClientY
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        this.freeCutMoved = true
+      }
+      const scaleX = this.splitItem.width / rect.width
+      const scaleY = this.splitItem.height / rect.height
+      const minLen = 8
+
+      if (drag.mode === 'move') {
+        if (cut.axis === 'vertical') {
+          const next = Math.min(
+            this.splitItem.width - 1,
+            Math.max(1, Math.round(drag.originPos + deltaX * scaleX)),
+          )
+          this.PatchFreeCut(drag.uid, { pos: next })
+        } else {
+          const next = Math.min(
+            this.splitItem.height - 1,
+            Math.max(1, Math.round(drag.originPos + deltaY * scaleY)),
+          )
+          this.PatchFreeCut(drag.uid, { pos: next })
+        }
+        return
+      }
+
+      if (cut.axis === 'vertical') {
+        const delta = Math.round(deltaY * scaleY)
+        if (drag.mode === 'start') {
+          const nextStart = Math.min(
+            drag.originEnd - minLen,
+            Math.max(0, drag.originStart + delta),
+          )
+          this.PatchFreeCut(drag.uid, { start: nextStart, end: drag.originEnd })
+        } else {
+          const nextEnd = Math.max(
+            drag.originStart + minLen,
+            Math.min(this.splitItem.height, drag.originEnd + delta),
+          )
+          this.PatchFreeCut(drag.uid, {
+            start: drag.originStart,
+            end: nextEnd,
+          })
+        }
+        return
+      }
+
+      const delta = Math.round(deltaX * scaleX)
+      if (drag.mode === 'start') {
+        const nextStart = Math.min(
+          drag.originEnd - minLen,
+          Math.max(0, drag.originStart + delta),
+        )
+        this.PatchFreeCut(drag.uid, { start: nextStart, end: drag.originEnd })
+      } else {
+        const nextEnd = Math.max(
+          drag.originStart + minLen,
+          Math.min(this.splitItem.width, drag.originEnd + delta),
+        )
+        this.PatchFreeCut(drag.uid, { start: drag.originStart, end: nextEnd })
+      }
+    },
+    /**
+     * 结束拖动切线
+     */
+    HandleFreeCutPointerUp() {
+      this.freeCutDrag = null
+      this.DetachFreeCutListeners()
+      window.setTimeout(() => {
+        this.freeCutMoved = false
+      }, 0)
+    },
+    /**
+     * 清空当前模式数据
+    /**
      * 清空当前模式数据
      */
     HandleClear() {
       this.ClearPreviewTimer()
+      this.DetachFreeCutListeners()
       this.stitchItems.forEach((item) => RevokeImageItem(item))
       this.stitchItems = []
       this.ClearStitchPreview()
@@ -1112,6 +1566,7 @@ export default defineComponent({
         RevokeImageItem(this.splitItem)
         this.splitItem = null
       }
+      this.freeCuts = []
       this.SetStatus('')
     },
     /**
@@ -1190,12 +1645,19 @@ export default defineComponent({
       }
       try {
         this.isBusy = true
-        const pieces = await SplitImageGrid(
-          this.splitItem.image,
-          this.splitRows,
-          this.splitCols,
-          this.splitItem.name,
-        )
+        const pieces =
+          this.mode === 'freeSplit'
+            ? await SplitImageBySegments(
+                this.splitItem.image,
+                this.freeCuts,
+                this.splitItem.name,
+              )
+            : await SplitImageGrid(
+                this.splitItem.image,
+                this.splitRows,
+                this.splitCols,
+                this.splitItem.name,
+              )
         if (pieces.length === 1) {
           DownloadBlob(pieces[0].blob, pieces[0].fileName)
           this.SetStatus('已开始下载 PNG')
@@ -1542,33 +2004,149 @@ export default defineComponent({
   box-shadow: 0 0 0 1px rgba(49, 65, 95, 0.12);
 }
 
+.split-source-frame.interactive {
+  cursor: crosshair;
+}
+
 .split-source-full {
   display: block;
   width: 100%;
   height: auto;
   vertical-align: middle;
+  pointer-events: none;
 }
 
 .cut-line {
   position: absolute;
   pointer-events: none;
   z-index: 1;
-  background: rgba(255, 248, 239, 0.92);
-  box-shadow: 0 0 0 1px rgba(49, 72, 111, 0.45);
+  background: var(--cut-color, #00e5ff);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 6px color-mix(in srgb, var(--cut-color, #00e5ff) 70%, transparent);
+}
+
+.cut-line.draggable {
+  pointer-events: auto;
+  z-index: 2;
 }
 
 .cut-line.vertical {
   top: 0;
   bottom: 0;
-  width: 2px;
+  width: 3px;
   transform: translateX(-50%);
 }
 
 .cut-line.horizontal {
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   transform: translateY(-50%);
+}
+
+.cut-line.segment.vertical {
+  bottom: auto;
+  width: 14px;
+  margin-left: -5.5px;
+  cursor: ew-resize;
+  background: linear-gradient(
+    90deg,
+    transparent 5px,
+    var(--cut-color, #00e5ff) 5px,
+    var(--cut-color, #00e5ff) 8px,
+    transparent 8px
+  );
+  box-shadow: none;
+}
+
+.cut-line.segment.horizontal {
+  right: auto;
+  height: 14px;
+  margin-top: -5.5px;
+  cursor: ns-resize;
+  background: linear-gradient(
+    180deg,
+    transparent 5px,
+    var(--cut-color, #00e5ff) 5px,
+    var(--cut-color, #00e5ff) 8px,
+    transparent 8px
+  );
+  box-shadow: none;
+}
+
+.cut-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cut-color, #00e5ff);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  z-index: 3;
+}
+
+.cut-line.segment.vertical .cut-handle {
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.cut-line.segment.vertical .cut-handle.start {
+  top: -6px;
+}
+
+.cut-line.segment.vertical .cut-handle.end {
+  bottom: -6px;
+}
+
+.cut-line.segment.horizontal .cut-handle {
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.cut-line.segment.horizontal .cut-handle.start {
+  left: -6px;
+}
+
+.cut-line.segment.horizontal .cut-handle.end {
+  right: -6px;
+}
+
+.free-split-tools {
+  margin-bottom: 8px;
+}
+
+.cut-color-row {
+  margin: 8px 0 12px;
+}
+
+.color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(49, 65, 95, 0.22);
+  background: #fff;
+  color: #31415f;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.color-chip.active {
+  border-color: var(--chip-color, #31486f);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-color) 35%, transparent);
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--chip-color, #00e5ff);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .pieces-title {
