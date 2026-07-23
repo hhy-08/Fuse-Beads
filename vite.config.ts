@@ -37,6 +37,13 @@ export default defineConfig(({ mode }) => {
         ...env,
       },
     },
+    optimizeDeps: {
+      exclude: ['onnxruntime-web'],
+    },
+    assetsInclude: ['**/*.wasm', '**/*.onnx'],
+    worker: {
+      format: 'es',
+    },
     build: {
       minify: 'terser',
       terserOptions: {

@@ -5,3 +5,5 @@ dist
 .vscode/*
 !.vscode/extensions.json
 public/pdfjs
+public/models/*.onnx
+!public/models/.gitkeep

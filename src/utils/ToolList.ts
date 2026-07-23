@@ -44,7 +44,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'image',
       name: '图片类工具',
-      description: '裁剪、拼接、压缩、水印（含文本）、格式转换等常见图片处理。',
+      description: '裁剪、拼接、压缩、水印、AI 抠图、格式转换等常见图片处理。',
     },
     {
       id: 'office',
@@ -126,6 +126,16 @@ export function GetToolList(): ToolItem[] {
       path: '/image-crop',
       available: true,
       badge: '可用',
+      category: 'image',
+    },
+    {
+      id: 'matting',
+      name: 'AI 智能抠图',
+      description:
+        '浏览器本地去背景，默认轻量模型（~5MB），可选高质量档（~43MB），导出透明 PNG。',
+      path: '/image-matting',
+      available: true,
+      badge: '新',
       category: 'image',
     },
     {

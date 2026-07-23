@@ -20,6 +20,7 @@
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
+- AI 智能抠图：浏览器本地去背景，默认轻量 u2netp（~5MB），可选高质量 silueta（~43MB），导出透明 PNG
 
 ## 技术栈
 
@@ -28,11 +29,13 @@
 - Vuex 4 + vuex-persistedstate（sessionStorage 持久化）
 - Vite 5 + TypeScript
 - Canvas 2D 绘制
+- `@bunnio/rembg-web` + `onnxruntime-web`（浏览器端 AI 抠图）
 
 ## 快速开始
 
 ```bash
 npm install --registry https://registry.npmjs.org
+npm run sync-matting   # 拉取抠图模型到 public/models（install 已含轻量档）
 npm run dev
 ```
 
@@ -58,6 +61,7 @@ npm run dev
 | `/` | 工具列表（默认首页） |
 | `/generator` | 拼豆图纸生成器 |
 | `/image-compress` | 图片压缩工具 |
+| `/image-matting` | AI 智能抠图（本地去背景） |
 | `/watermark` | 图片水印工具 |
 | `/image-converter` | 图片格式转换 |
 | `/unit-converter` | 单位转换 |
@@ -222,6 +226,52 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-23（Vite ORT ?url 修复）
+
+- **会话目的**：修复 Vite 报错「public 下 jsep.mjs 不能被源码动态 import」。
+- **完成任务**：ORT wasm/mjs 改为 `onnxruntime-web/...?...url` 由 Vite 打包；不再同步 `public/ort`。
+- **关键决策**：`.onnx` 仍放 `public/models`（fetch）；ORT 模块文件必须走打包管线。
+- **修改文件**：`ImageMatting.ts`、`vite.config.ts`、`FetchMattingModels.mjs`、`public/_headers`、`.gitignore`、`README.md`
+
+### 2026-07-23（ORT jsep 资源补齐）
+
+- **会话目的**：修复抠图时报 `ort-wasm-simd-threaded.jsep.mjs` 404 / no available backend。
+- **完成任务**：同步脚本重新包含 jsep wasm/mjs；session 优先 `wasm` EP；错误文案区分模型与 ORT。
+- **关键决策**：onnxruntime-web 会动态加载 jsep 模块，不能省略。
+- **修改文件**：`scripts/FetchMattingModels.mjs`、`src/utils/ImageMatting.ts`、`README.md`
+
+### 2026-07-23（AI 抠图避坑与模型同源）
+
+- **会话目的**：修复 HuggingFace 模型下载超时，并补齐前端 AI 抠图通用避坑点。
+- **完成任务**：
+  - 模型与 ORT WASM 改为同源 `public/models`、`public/ort`（脚本拉取，不再依赖 HF）
+  - 开启 `ort.env.wasm.proxy`（Web Worker）减轻主线程卡顿
+  - 推理前长边限制 2048 自动缩小
+  - 补充首次加载体积提示与中文网络错误文案
+  - 增加 Cloudflare Pages `_headers` 对 `/models/*`、`/ort/*` 长期缓存
+- **关键决策**：
+  - 安装期用 GitHub Releases 拉模型，运行时只走本站静态资源
+  - 大文件 gitignore，构建 / `npm run sync-matting` 时拉取
+- **修改文件**：
+  - `scripts/FetchMattingModels.mjs`、`src/utils/ImageMatting.ts`、`src/views/imageMatting/index.vue`
+  - `public/_headers`、`.gitignore`、`package.json`、`README.md`
+
+### 2026-07-23（AI 智能抠图）
+
+- **会话目的**：新增浏览器端 AI 智能抠图工具，并采用双档模型兼顾体积与效果。
+- **完成任务**：
+  - 接入 `@bunnio/rembg-web` + `onnxruntime-web`
+  - 默认轻量 `u2netp`（~5MB），可选高质量 `silueta`（~43MB）
+  - 新增 `/image-matting` 页面：上传、进度、原图/结果对比、透明 PNG 下载
+  - 首页 `ToolList` 增加「AI 智能抠图」入口
+- **关键决策**：
+  - 不用 imgly（~40MB+、AGPL）与完整 RMBG（更大）；选 rembg-web 可换小模型
+  - 模型按需从 HuggingFace 下载并 IndexedDB 缓存，WASM 走 jsDelivr CDN
+  - 动态 import 抠图依赖，避免拖慢其它工具首屏
+- **修改文件**：
+  - 新增 `src/utils/ImageMatting.ts`、`src/views/imageMatting/**`、`src/router/imageMatting/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`vite.config.ts`、`package.json`、`README.md`
 
 ### 2026-07-23（水印工具支持文本文件）
 
