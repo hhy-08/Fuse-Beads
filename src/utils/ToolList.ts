@@ -102,6 +102,15 @@ export function GetToolList(): ToolItem[] {
       category: 'beads',
     },
     {
+      id: 'board-calc',
+      name: '图纸尺寸计算',
+      description: '输入图案宽高估算拼豆板规格与豆子总数，上传图纸可统计各色备料用量。',
+      path: '/board-calculator',
+      available: true,
+      badge: '可用',
+      category: 'beads',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',
