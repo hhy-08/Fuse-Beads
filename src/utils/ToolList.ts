@@ -183,6 +183,15 @@ export function GetToolList(): ToolItem[] {
       category: 'office',
     },
     {
+      id: 'text-diff',
+      name: '文本对比',
+      description: '两段文字差异高亮，支持粘贴或上传 txt / json / vue / js / ts 等文本文件，适合校对与代码对比。',
+      path: '/text-diff',
+      available: true,
+      badge: '可用',
+      category: 'office',
+    },
+    {
       id: 'qrcode',
       name: '二维码生成',
       description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
