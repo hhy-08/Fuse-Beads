@@ -116,6 +116,22 @@ src/
 
 ## 会话总结
 
+### 2026-07-23（imageJoin 组件拆分）
+
+- **会话目的**：将 `imageJoin/index.vue` 模板中拼接与分割大块 UI 拆成可维护的子组件，保持行为不变。
+- **完成任务**：
+  - 抽出 `StitchPanel`（拼接参数 + 预览，含 `AppendItems` / `Clear` / `HasItems`）
+  - 抽出 `SplitOptionsPanel`（分割参数与下载）
+  - 抽出 `SplitPreviewPanel`（分割预览与自由切线交互）
+  - 父页仅保留模式切换、上传、状态与分割公共状态；修复 `HandleClear` 重复注释
+- **关键决策**：拼接状态与方法内聚到 `StitchPanel`；自由切线交互内聚到预览面板；参数面板负责下载并通过 `status` / `busy` 与父级通信。
+- **修改文件**：
+  - `src/views/imageJoin/index.vue`
+  - `src/views/imageJoin/components/StitchPanel.vue`（新增）
+  - `src/views/imageJoin/components/SplitOptionsPanel.vue`（新增）
+  - `src/views/imageJoin/components/SplitPreviewPanel.vue`（新增）
+  - `README.md`
+
 ### 2026-07-23（自由分割细条二次修复）
 
 - **会话目的**：竖线视觉贴齐横线后仍出现 799×9 / 799×15 等碎条。
