@@ -93,6 +93,15 @@ export function GetToolList(): ToolItem[] {
       category: 'beads',
     },
     {
+      id: 'palette-sim',
+      name: '配色模拟',
+      description: '输入多个 MARD 色号实时预览搭配效果，支持保存配色方案到本地。',
+      path: '/palette-simulator',
+      available: true,
+      badge: '可用',
+      category: 'beads',
+    },
+    {
       id: 'palette',
       name: '色卡对照',
       description: '浏览 MARD 色号与色值对照，方便备料与核对。',

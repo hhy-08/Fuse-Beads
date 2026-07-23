@@ -338,6 +338,19 @@ export function GetMardColorsBySeries(series: string): MardColor[] {
 }
 
 /**
+ * 根据色号查找 MARD 颜色（忽略大小写）
+ * @param code 色号，如 A1
+ * @returns 匹配色号，未找到则返回 null
+ */
+export function FindMardColorByCode(code: string): MardColor | null {
+  const normalized = code.trim().toUpperCase()
+  if (!normalized) {
+    return null
+  }
+  return MARDCOLORS.find((item) => item.code.toUpperCase() === normalized) || null
+}
+
+/**
  * 根据 HEX 查找对应 MARD 色号（忽略大小写）
  * @param hex 颜色值
  * @returns 匹配的色号，未找到则返回 null
