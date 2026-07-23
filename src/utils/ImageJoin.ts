@@ -851,78 +851,268 @@ function SnapToGuides(
 }
 
 /**
+ * 计算切线吸附阈值（随图尺寸放大，覆盖预览缩放带来的目测误差）
+ * @param width 原图宽
+ * @param height 原图高
+ * @returns 吸附像素阈值
+ */
+export function GetCutSnapThreshold(width: number, height: number): number {
+  return Math.max(28, Math.round(Math.min(width, height) * 0.03))
+}
+
+/**
  * 对齐自由切线：端点吸附到交叉切线，避免差几像素产生细条碎块
  * @param width 原图宽
  * @param height 原图高
  * @param cuts 原始线段
- * @param threshold 吸附阈值
+ * @param threshold 吸附阈值；不传则按图尺寸自动计算
  * @returns 对齐后的线段
  */
 export function AlignFreeCutSegments(
   width: number,
   height: number,
   cuts: FreeCutSegment[],
-  threshold = 8,
+  threshold?: number,
 ): FreeCutSegment[] {
   if (!cuts.length) {
     return []
   }
+  const snap = threshold ?? GetCutSnapThreshold(width, height)
   const normalized = cuts.map(NormalizeCutSegment)
-  const verticalPosGuides = [
-    0,
-    width,
-    ...normalized.filter((cut) => cut.axis === 'vertical').map((cut) => cut.pos),
-  ]
-  const horizontalPosGuides = [
-    0,
-    height,
-    ...normalized
-      .filter((cut) => cut.axis === 'horizontal')
-      .map((cut) => cut.pos),
-  ]
-
-  return normalized.map((cut) => {
+  const endpointAligned = normalized.map((cut) => {
+    const verticalPosGuides = [
+      0,
+      width,
+      ...normalized.filter((item) => item.axis === 'vertical').map((item) => item.pos),
+    ]
+    const horizontalPosGuides = [
+      0,
+      height,
+      ...normalized
+        .filter((item) => item.axis === 'horizontal')
+        .map((item) => item.pos),
+    ]
     if (cut.axis === 'vertical') {
-      const pos = Math.round(
-        Math.min(
-          width - 1,
-          Math.max(1, SnapToGuides(cut.pos, verticalPosGuides, threshold)),
-        ),
-      )
       const start = Math.round(
         Math.min(
           height,
-          Math.max(0, SnapToGuides(cut.start, horizontalPosGuides, threshold)),
+          Math.max(0, SnapToGuides(cut.start, horizontalPosGuides, snap)),
         ),
       )
       const end = Math.round(
         Math.min(
           height,
-          Math.max(0, SnapToGuides(cut.end, horizontalPosGuides, threshold)),
+          Math.max(0, SnapToGuides(cut.end, horizontalPosGuides, snap)),
         ),
       )
-      return NormalizeCutSegment({ ...cut, pos, start, end })
+      return NormalizeCutSegment({ ...cut, start, end })
     }
-    const pos = Math.round(
-      Math.min(
-        height - 1,
-        Math.max(1, SnapToGuides(cut.pos, horizontalPosGuides, threshold)),
-      ),
-    )
     const start = Math.round(
       Math.min(
         width,
-        Math.max(0, SnapToGuides(cut.start, verticalPosGuides, threshold)),
+        Math.max(0, SnapToGuides(cut.start, verticalPosGuides, snap)),
       ),
     )
     const end = Math.round(
       Math.min(
         width,
-        Math.max(0, SnapToGuides(cut.end, verticalPosGuides, threshold)),
+        Math.max(0, SnapToGuides(cut.end, verticalPosGuides, snap)),
       ),
     )
-    return NormalizeCutSegment({ ...cut, pos, start, end })
+    return NormalizeCutSegment({ ...cut, start, end })
   })
+
+  // 合并同区域过近的平行切线（预览缩放时容易点出双线）
+  const merged: FreeCutSegment[] = []
+  for (const cut of endpointAligned) {
+    const twin = merged.find((item) => {
+      if (item.axis !== cut.axis) return false
+      if (Math.abs(item.pos - cut.pos) > snap) return false
+      const overlap =
+        Math.min(item.end, cut.end) - Math.max(item.start, cut.start)
+      return overlap > 0
+    })
+    if (!twin) {
+      merged.push({ ...cut })
+      continue
+    }
+    twin.pos = Math.round((twin.pos + cut.pos) / 2)
+    twin.start = Math.min(twin.start, cut.start)
+    twin.end = Math.max(twin.end, cut.end)
+  }
+  return merged
+}
+
+/**
+ * 判断若干矩形在一维区间上是否无缝覆盖
+ * @param ranges 区间列表
+ * @param start 目标起点
+ * @param end 目标终点
+ * @returns 是否完全覆盖
+ */
+function CoversRange(
+  ranges: Array<{ start: number; end: number }>,
+  start: number,
+  end: number,
+): boolean {
+  const sorted = [...ranges].sort((a, b) => a.start - b.start)
+  let cursor = start
+  for (const range of sorted) {
+    if (range.end <= cursor) continue
+    if (range.start > cursor + 0.5) return false
+    cursor = Math.max(cursor, range.end)
+  }
+  return cursor >= end - 0.5
+}
+
+/**
+ * 将过薄碎条并入相邻块（仅合并竖线未贴齐产生的缝，保留两道横切线夹住的窄带）
+ * @param rects 原始矩形
+ * @param width 原图宽
+ * @param height 原图高
+ * @param cuts 已对齐切线
+ * @param minSize 小于该尺寸视为碎条
+ * @returns 合并后的矩形
+ */
+function AbsorbThinStrips(
+  rects: SplitRect[],
+  width: number,
+  height: number,
+  cuts: FreeCutSegment[],
+  minSize: number,
+): SplitRect[] {
+  const hGuides = [
+    0,
+    height,
+    ...cuts.filter((cut) => cut.axis === 'horizontal').map((cut) => cut.pos),
+  ]
+  const vGuides = [
+    0,
+    width,
+    ...cuts.filter((cut) => cut.axis === 'vertical').map((cut) => cut.pos),
+  ]
+  const IsNearGuide = (value: number, guides: number[]): boolean =>
+    guides.some((guide) => Math.abs(guide - value) <= 1)
+
+  let list = rects.map((item) => ({ ...item }))
+  const skipped = new Set<string>()
+  let guard = 0
+  while (guard < 64) {
+    guard += 1
+    const thinIndex = list.findIndex((item) => {
+      const key = `${item.x},${item.y},${item.width},${item.height}`
+      if (skipped.has(key)) return false
+      if (item.width >= minSize && item.height >= minSize) return false
+      if (item.height < minSize) {
+        const topGuided = IsNearGuide(item.y, hGuides)
+        const bottomGuided = IsNearGuide(item.y + item.height, hGuides)
+        return !(topGuided && bottomGuided)
+      }
+      const leftGuided = IsNearGuide(item.x, vGuides)
+      const rightGuided = IsNearGuide(item.x + item.width, vGuides)
+      return !(leftGuided && rightGuided)
+    })
+    if (thinIndex < 0) break
+    const thin = list[thinIndex]
+    let absorbed = false
+
+    if (thin.height < minSize) {
+      const above = list.filter(
+        (item, index) =>
+          index !== thinIndex &&
+          Math.abs(item.y + item.height - thin.y) <= 1 &&
+          item.x < thin.x + thin.width &&
+          item.x + item.width > thin.x,
+      )
+      const below = list.filter(
+        (item, index) =>
+          index !== thinIndex &&
+          Math.abs(item.y - (thin.y + thin.height)) <= 1 &&
+          item.x < thin.x + thin.width &&
+          item.x + item.width > thin.x,
+      )
+      const aboveCovers = CoversRange(
+        above.map((item) => ({ start: item.x, end: item.x + item.width })),
+        thin.x,
+        thin.x + thin.width,
+      )
+      const belowCovers = CoversRange(
+        below.map((item) => ({ start: item.x, end: item.x + item.width })),
+        thin.x,
+        thin.x + thin.width,
+      )
+      const preferAbove =
+        aboveCovers &&
+        (!belowCovers ||
+          above.reduce((sum, item) => sum + item.width * item.height, 0) >=
+            below.reduce((sum, item) => sum + item.width * item.height, 0))
+
+      if (preferAbove && aboveCovers) {
+        for (const item of above) {
+          item.height += thin.height
+        }
+        list.splice(thinIndex, 1)
+        absorbed = true
+      } else if (belowCovers) {
+        for (const item of below) {
+          item.y = thin.y
+          item.height += thin.height
+        }
+        list.splice(thinIndex, 1)
+        absorbed = true
+      }
+    } else if (thin.width < minSize) {
+      const left = list.filter(
+        (item, index) =>
+          index !== thinIndex &&
+          Math.abs(item.x + item.width - thin.x) <= 1 &&
+          item.y < thin.y + thin.height &&
+          item.y + item.height > thin.y,
+      )
+      const right = list.filter(
+        (item, index) =>
+          index !== thinIndex &&
+          Math.abs(item.x - (thin.x + thin.width)) <= 1 &&
+          item.y < thin.y + thin.height &&
+          item.y + item.height > thin.y,
+      )
+      const leftCovers = CoversRange(
+        left.map((item) => ({ start: item.y, end: item.y + item.height })),
+        thin.y,
+        thin.y + thin.height,
+      )
+      const rightCovers = CoversRange(
+        right.map((item) => ({ start: item.y, end: item.y + item.height })),
+        thin.y,
+        thin.y + thin.height,
+      )
+      const preferLeft =
+        leftCovers &&
+        (!rightCovers ||
+          left.reduce((sum, item) => sum + item.width * item.height, 0) >=
+            right.reduce((sum, item) => sum + item.width * item.height, 0))
+
+      if (preferLeft && leftCovers) {
+        for (const item of left) {
+          item.width += thin.width
+        }
+        list.splice(thinIndex, 1)
+        absorbed = true
+      } else if (rightCovers) {
+        for (const item of right) {
+          item.x = thin.x
+          item.width += thin.width
+        }
+        list.splice(thinIndex, 1)
+        absorbed = true
+      }
+    }
+
+    if (!absorbed) {
+      skipped.add(`${thin.x},${thin.y},${thin.width},${thin.height}`)
+    }
+  }
+  return list
 }
 
 /**
@@ -965,7 +1155,8 @@ export function PartitionRectsBySegments(
   cuts: FreeCutSegment[],
 ): SplitRect[] {
   let rects: SplitRect[] = [{ x: 0, y: 0, width, height }]
-  const sorted = AlignFreeCutSegments(width, height, cuts)
+  const snap = GetCutSnapThreshold(width, height)
+  const sorted = AlignFreeCutSegments(width, height, cuts, snap)
     .filter((cut) => cut.end - cut.start >= 1)
     .sort((a, b) => a.pos - b.pos || a.start - b.start)
 
@@ -984,7 +1175,7 @@ export function PartitionRectsBySegments(
       rects = SplitRectsByHorizontalSegment(rects, y, xStart, xEnd)
     }
   }
-  return rects
+  return AbsorbThinStrips(rects, width, height, sorted, snap)
 }
 
 /**

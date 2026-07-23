@@ -511,6 +511,7 @@ import {
   GetScaledDrawSize,
   GetSplitPreviewCells,
   AlignFreeCutSegments,
+  GetCutSnapThreshold,
   GetSplitPreviewCellsFromSegments,
   GetStitchCanvasSize,
   LoadImageItemFromFile,
@@ -1380,16 +1381,20 @@ export default defineComponent({
       if (near) {
         return
       }
-      this.freeCuts = [
-        ...this.freeCuts,
-        {
-          uid: this.CreateCutUid(),
-          axis,
-          pos: clamped,
-          start: 0,
-          end: maxLen,
-        },
-      ]
+      this.freeCuts = AlignFreeCutSegments(
+        this.splitItem.width,
+        this.splitItem.height,
+        [
+          ...this.freeCuts,
+          {
+            uid: this.CreateCutUid(),
+            axis,
+            pos: clamped,
+            start: 0,
+            end: maxLen,
+          },
+        ],
+      )
     },
     /**
      * 删除切线
@@ -1487,6 +1492,36 @@ export default defineComponent({
       const scaleX = this.splitItem.width / rect.width
       const scaleY = this.splitItem.height / rect.height
       const minLen = 8
+      const snap = GetCutSnapThreshold(
+        this.splitItem.width,
+        this.splitItem.height,
+      )
+      const hGuides = [
+        0,
+        this.splitItem.height,
+        ...this.freeCuts
+          .filter((item) => item.axis === 'horizontal')
+          .map((item) => item.pos),
+      ]
+      const vGuides = [
+        0,
+        this.splitItem.width,
+        ...this.freeCuts
+          .filter((item) => item.axis === 'vertical')
+          .map((item) => item.pos),
+      ]
+      const SnapValue = (value: number, guides: number[]): number => {
+        let best = value
+        let bestDist = snap
+        for (const guide of guides) {
+          const dist = Math.abs(guide - value)
+          if (dist <= bestDist) {
+            bestDist = dist
+            best = guide
+          }
+        }
+        return best
+      }
 
       if (drag.mode === 'move') {
         if (cut.axis === 'vertical') {
@@ -1510,13 +1545,16 @@ export default defineComponent({
         if (drag.mode === 'start') {
           const nextStart = Math.min(
             drag.originEnd - minLen,
-            Math.max(0, drag.originStart + delta),
+            Math.max(0, SnapValue(drag.originStart + delta, hGuides)),
           )
           this.PatchFreeCut(drag.uid, { start: nextStart, end: drag.originEnd })
         } else {
           const nextEnd = Math.max(
             drag.originStart + minLen,
-            Math.min(this.splitItem.height, drag.originEnd + delta),
+            Math.min(
+              this.splitItem.height,
+              SnapValue(drag.originEnd + delta, hGuides),
+            ),
           )
           this.PatchFreeCut(drag.uid, {
             start: drag.originStart,
@@ -1530,13 +1568,16 @@ export default defineComponent({
       if (drag.mode === 'start') {
         const nextStart = Math.min(
           drag.originEnd - minLen,
-          Math.max(0, drag.originStart + delta),
+          Math.max(0, SnapValue(drag.originStart + delta, vGuides)),
         )
         this.PatchFreeCut(drag.uid, { start: nextStart, end: drag.originEnd })
       } else {
         const nextEnd = Math.max(
           drag.originStart + minLen,
-          Math.min(this.splitItem.width, drag.originEnd + delta),
+          Math.min(
+            this.splitItem.width,
+            SnapValue(drag.originEnd + delta, vGuides),
+          ),
         )
         this.PatchFreeCut(drag.uid, { start: drag.originStart, end: nextEnd })
       }
