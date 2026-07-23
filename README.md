@@ -20,7 +20,7 @@
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
-- AI 智能抠图：浏览器本地去背景，默认轻量 u2netp（~5MB），可选高质量 silueta（~43MB），导出透明 PNG
+- AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
 
@@ -35,7 +35,10 @@
 
 ```bash
 npm install --registry https://registry.npmjs.org
-npm run sync-matting   # 拉取抠图模型到 public/models（install 已含轻量档）
+npm run sync-matting:light    # 可选：预置轻量模型到 public/models（~5MB）
+# 大模型也可不预置：页面选中后自动下载到浏览器 IndexedDB
+npm run sync-matting:poster   # 可选：预置轻量 + 海报模型
+npm run sync-matting          # 可选：同步全部抠图模型
 npm run dev
 ```
 
@@ -226,6 +229,43 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-23（修复 ONNX protobuf 解析失败）
+
+- **会话目的**：修复「通用高清」等模型加载时报 `protobuf parsing failed`。
+- **完成任务**：
+  - 按模型最小体积 + 文件头校验，拒绝 HTML/LFS/截断包
+  - 本地 `public/models` 探测避免 SPA 把首页 HTML 当成 onnx
+  - session 创建遇损坏缓存时自动清 IndexedDB 并强制重下
+- **关键决策**：此前仅用 `>1MB` 判断过松，代理/回退页会被误缓存。
+- **修改文件**：`src/utils/ImageMatting.ts`、`src/views/imageMatting/index.vue`、`README.md`
+
+### 2026-07-23（默认轻量 + 按需下载 + 海报发虚修复）
+
+- **会话目的**：默认使用轻量模型；大模型仅在用户选中后下载；修复海报档主体镂空发虚。
+- **完成任务**：
+  - 默认档位改为 `u2netp`（轻量）
+  - 切换到海报/高清/人像时触发 `EnsureMattingModelReady`（本地 → IndexedDB → 镜像下载）
+  - isnet 改为单输出优选 + 百分位归一化 + 强锐化 alpha，减轻立体字半透明镂空
+- **关键决策**：复杂 3D 海报字轻量档往往更稳；大模型按需下载，避免首屏拉 170MB+。
+- **修改文件**：`src/utils/ImageMatting.ts`、`src/views/imageMatting/index.vue`、`README.md`
+
+### 2026-07-23（海报模型与细节保留）
+
+- **会话目的**：增加更适合海报的模型，并减少抠图后细节丢失。
+- **完成任务**：
+  - 新增 `isnet-anime`（海报/插画推荐，1024）与 `isnet-general-use`（通用高清）
+  - 海报档使用更宽松 alpha（preserve），减轻光效/细线被削掉
+  - 同步脚本支持 `--poster`；默认选中海报模型
+- **关键决策**：u2net 320 输入易糊细线；isnet 1024 + 宽松阈值更适合海报。
+- **修改文件**：`types.ts`、`ImageMatting.ts`、`imageMatting/index.vue`、`FetchMattingModels.mjs`、`package.json`、`ToolList.ts`、`README.md`
+
+### 2026-07-23（精细档软蒙版修复）
+
+- **会话目的**：修复「精细/原高质量」整图发灰半透明，效果反而不如轻量档。
+- **完成任务**：改为多输出 max 融合 + alpha 锐化自研合成；取消 rembg 默认 blur；文案改为轻量推荐 / 精细。
+- **关键决策**：silueta 对平面海报易出软 mask；轻量 u2netp 对这类图更稳，精细档加强锐化并提示适用场景。
+- **修改文件**：`src/utils/ImageMatting.ts`、`src/views/imageMatting/index.vue`、`README.md`
 
 ### 2026-07-23（Vite ORT ?url 修复）
 

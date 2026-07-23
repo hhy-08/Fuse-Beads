@@ -5,7 +5,7 @@
         <p class="brand">{{ appBrand }}</p>
         <h1>AI 智能抠图</h1>
         <p class="subtitle">
-          浏览器本地去背景，默认轻量模型（~5MB），可选高质量档；结果导出透明 PNG
+          浏览器本地去背景；默认轻量模型，其它档位选中后自动下载
         </p>
       </div>
       <nav class="hero-nav">
@@ -39,7 +39,7 @@
             支持 JPG / PNG / WebP，单张 ≤ 20MB；长边超过 2048 会自动缩小再抠图
           </span>
           <span class="upload-tip warn">
-            首次使用需加载 AI 模型（轻量约 5MB / 高质量约 43MB），低端手机可能较慢
+            默认轻量约 5MB；海报/高清等大模型仅在你选中后下载并缓存
           </span>
         </div>
       </section>
@@ -57,13 +57,16 @@
               :disabled="isBusy"
               @click="HandleModelChange(item.id)"
             >
-              <span class="chip-label">{{ item.label }}</span>
+              <span class="chip-main">
+                <span class="chip-label">{{ item.label }}</span>
+                <span v-if="item.tag" class="chip-tag">{{ item.tag }}</span>
+              </span>
               <span class="chip-size">{{ item.sizeHint }}</span>
             </button>
           </div>
           <p class="model-desc">{{ currentModelDesc }}</p>
           <p class="model-tip">
-            模型与推理引擎已同源托管；首次加载后浏览器会缓存。处理过程在后台线程运行，避免页面长时间卡死。
+            默认「轻量」；切换其它档位时会自动下载模型到浏览器缓存。复杂立体字海报建议先用轻量档。
           </p>
 
           <div class="actions">
@@ -147,17 +150,19 @@
 <script lang="ts">
 /**
  * AI 智能抠图工具页
- * 双档模型：默认 u2netp（轻量），可选 silueta（高质量）
+ * 默认轻量 u2netp；其它模型选中后再按需下载
  */
 import { defineComponent } from 'vue'
 import { APPBRAND } from '@/utils/Brand'
 import {
   BuildMattingFileName,
   DownloadMattingBlob,
+  EnsureMattingModelReady,
   FormatMattingError,
   FormatMattingFileSize,
   GetMattingModelOptions,
   LoadMattingSource,
+  RedownloadMattingModel,
   RemoveImageBackground,
   RevokeMattingUrl,
 } from '@/utils/ImageMatting'
@@ -308,7 +313,7 @@ export default defineComponent({
         this.fileSize = file.size
         this.imageWidth = loaded.width
         this.imageHeight = loaded.height
-        this.SetStatus('图片已加载，选择模型后开始抠图')
+        this.SetStatus('图片已加载，可直接用默认轻量模型抠图')
       } catch (error) {
         this.SetStatus(
           error instanceof Error ? error.message : '加载失败',
@@ -317,11 +322,16 @@ export default defineComponent({
       }
     },
     /**
-     * 切换模型档位
+     * 切换模型档位；非轻量档选中后立即按需下载
      * @param modelId 模型 id
      */
-    HandleModelChange(modelId: MattingModelId) {
-      if (this.modelId === modelId) {
+    async HandleModelChange(modelId: MattingModelId) {
+      if (this.isBusy) {
+        return
+      }
+      const shouldForceRedownload =
+        this.modelId === modelId && this.hasError && modelId !== 'u2netp'
+      if (this.modelId === modelId && !shouldForceRedownload) {
         return
       }
       this.modelId = modelId
@@ -329,7 +339,40 @@ export default defineComponent({
         RevokeMattingUrl(this.resultUrl)
         this.resultUrl = ''
         this.resultBlob = null
-        this.SetStatus('已切换模型，请重新抠图')
+      }
+      if (modelId === 'u2netp') {
+        this.SetStatus('已切换为轻量模型，可直接抠图')
+        return
+      }
+      try {
+        this.isBusy = true
+        this.hasError = false
+        this.progress = 0
+        this.progressText = shouldForceRedownload
+          ? '准备重新下载模型…'
+          : '准备下载模型…'
+        this.SetStatus(
+          shouldForceRedownload
+            ? '检测到上次模型异常，正在重新下载…'
+            : '正在下载所选模型，完成后即可抠图…',
+        )
+        const PrepareModel = shouldForceRedownload
+          ? RedownloadMattingModel
+          : EnsureMattingModelReady
+        await PrepareModel(modelId, (info) => {
+          this.progress = Math.max(0, Math.min(100, Math.round(info.progress)))
+          this.progressText = info.message || info.step
+        })
+        this.progress = 100
+        this.progressText = '模型已就绪'
+        this.SetStatus('模型已下载并缓存，可开始抠图')
+      } catch (error) {
+        this.progress = 0
+        this.progressText = ''
+        this.SetStatus(FormatMattingError(error, modelId), true)
+        this.modelId = 'u2netp'
+      } finally {
+        this.isBusy = false
       }
     },
     /**
@@ -557,15 +600,31 @@ export default defineComponent({
 
 .mode-chip {
   display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: 1px solid rgba(49, 65, 95, 0.18);
   background: #fff;
   color: #31415f;
   cursor: pointer;
   font-size: 0.92rem;
+  min-width: 132px;
+}
+
+.chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip-tag {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(61, 110, 176, 0.14);
+  color: #1d4f8c;
 }
 
 .mode-chip .chip-size {
@@ -582,6 +641,13 @@ export default defineComponent({
 .mode-chip:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.model-tip code {
+  font-size: 0.8rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(49, 65, 95, 0.08);
 }
 
 .model-desc {

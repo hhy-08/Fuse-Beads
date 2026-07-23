@@ -2,6 +2,11 @@
  * 将 AI 抠图 ONNX 模型拉取到 public/models
  * 默认从 GitHub Releases 下载（安装期走服务端网络，避开浏览器访问 HuggingFace 超时）
  * ORT WASM 由 Vite ?url 从 node_modules 打包，无需再同步到 public/ort
+ *
+ * 用法：
+ *   node scripts/FetchMattingModels.mjs           # 全部模型
+ *   node scripts/FetchMattingModels.mjs --light   # 仅 u2netp
+ *   node scripts/FetchMattingModels.mjs --poster  # 轻量 + 海报推荐 isnet-anime
  */
 import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -14,14 +19,32 @@ const targetDir = join(rootDir, 'public', 'models')
 /** 模型清单：文件名 → 下载地址与大致体积（字节，用于跳过已存在完整文件） */
 const MODELLIST = [
   {
+    id: 'u2netp',
     fileName: 'u2netp.onnx',
     url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
     minBytes: 4 * 1024 * 1024,
+    group: 'light',
   },
   {
+    id: 'silueta',
     fileName: 'silueta.onnx',
     url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx',
     minBytes: 40 * 1024 * 1024,
+    group: 'detail',
+  },
+  {
+    id: 'isnet-anime',
+    fileName: 'isnet-anime.onnx',
+    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
+    minBytes: 160 * 1024 * 1024,
+    group: 'poster',
+  },
+  {
+    id: 'isnet-general-use',
+    fileName: 'isnet-general-use.onnx',
+    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
+    minBytes: 160 * 1024 * 1024,
+    group: 'detail',
   },
 ]
 
@@ -61,12 +84,18 @@ async function DownloadModel(item, force = false) {
 
 const force = process.argv.includes('--force')
 const onlyLight = process.argv.includes('--light')
+const onlyPoster = process.argv.includes('--poster')
 
 try {
   mkdirSync(targetDir, { recursive: true })
-  const list = onlyLight
-    ? MODELLIST.filter((item) => item.fileName === 'u2netp.onnx')
-    : MODELLIST
+  let list = MODELLIST
+  if (onlyLight) {
+    list = MODELLIST.filter((item) => item.group === 'light')
+  } else if (onlyPoster) {
+    list = MODELLIST.filter(
+      (item) => item.group === 'light' || item.group === 'poster',
+    )
+  }
   for (const item of list) {
     await DownloadModel(item, force)
   }

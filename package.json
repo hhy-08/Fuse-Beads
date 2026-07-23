@@ -16,6 +16,7 @@
     "sync-pdfjs": "node scripts/SyncPdfjsAssets.mjs",
     "sync-matting": "node scripts/FetchMattingModels.mjs",
     "sync-matting:light": "node scripts/FetchMattingModels.mjs --light",
+    "sync-matting:poster": "node scripts/FetchMattingModels.mjs --poster",
     "server:dev": "npm --prefix server run dev",
     "server:deploy": "npm --prefix server run deploy",
     "server:deploy:full": "npm --prefix server run deploy:full",

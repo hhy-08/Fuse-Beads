@@ -3,7 +3,11 @@
  */
 
 /** 抠图模型档位 */
-export type MattingModelId = 'u2netp' | 'silueta'
+export type MattingModelId =
+  | 'u2netp'
+  | 'silueta'
+  | 'isnet-anime'
+  | 'isnet-general-use'
 
 /** 抠图进度步骤 */
 export type MattingProgressStep =
@@ -20,6 +24,8 @@ export type MattingModelOption = {
   label: string
   sizeHint: string
   description: string
+  /** 场景标签，如「海报」 */
+  tag?: string
 }
 
 /** 上传后的原图信息 */

@@ -132,7 +132,7 @@ export function GetToolList(): ToolItem[] {
       id: 'matting',
       name: 'AI 智能抠图',
       description:
-        '浏览器本地去背景，默认轻量模型（~5MB），可选高质量档（~43MB），导出透明 PNG。',
+        '浏览器本地去背景；默认轻量模型，其它档位选中后自动下载，导出透明 PNG。',
       path: '/image-matting',
       available: true,
       badge: '新',
