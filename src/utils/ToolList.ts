@@ -44,7 +44,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'image',
       name: '图片类工具',
-      description: '压缩、水印、格式转换等常见图片处理，全部本地完成。',
+      description: '裁剪、压缩、水印、格式转换等常见图片处理，全部本地完成。',
     },
     {
       id: 'office',
@@ -118,6 +118,15 @@ export function GetToolList(): ToolItem[] {
       available: false,
       badge: '即将推出',
       category: 'beads',
+    },
+    {
+      id: 'crop',
+      name: '图片裁剪',
+      description: '固定比例、圆形与圆角裁切，适合头像与素材预处理，可送入拼豆生成器。',
+      path: '/image-crop',
+      available: true,
+      badge: '可用',
+      category: 'image',
     },
     {
       id: 'compress',
