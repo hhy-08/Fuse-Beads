@@ -1,0 +1,15 @@
+# Fuse PDF API —— Cloudflare Workers（默认：无 Docker / 无 Containers）
+# 仅 P0：合并 / 拆分 / 旋转 / 水印 / 图片转 PDF
+# 完整版（Word↔PDF + 加密）见 wrangler.containers.toml，需本机 Docker
+name = "fuse-pdf-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-22"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,https://fuse-beads.pages.dev"
+MAX_UPLOAD_BYTES = "52428800"
+ENABLE_CONTAINERS = "0"

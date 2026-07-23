@@ -1,0 +1,19 @@
+# Cloudflare Pages 配置（前端 fuse-beads）
+# 通过 Service Binding 内网调用 fuse-pdf-api，浏览器只访问 pages.dev
+name = "fuse-beads"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-07-22"
+
+[[services]]
+binding = "PDF_API"
+service = "fuse-pdf-api"
+
+[env.production]
+[[env.production.services]]
+binding = "PDF_API"
+service = "fuse-pdf-api"
+
+[env.preview]
+[[env.preview.services]]
+binding = "PDF_API"
+service = "fuse-pdf-api"

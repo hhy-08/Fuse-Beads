@@ -49,7 +49,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'office',
       name: '文本 / 日常办公小工具',
-      description: '文件转换、二维码等办公与日常效率工具。',
+      description: 'PDF 工具站、文件转换、二维码等办公与日常效率工具。',
     },
     {
       id: 'life',
@@ -172,6 +172,16 @@ export function GetToolList(): ToolItem[] {
       available: true,
       badge: '可用',
       category: 'image',
+    },
+    {
+      id: 'pdf-tools',
+      name: 'PDF 工具站',
+      description:
+        '合并 / 拆分 / 旋转 / 水印 / 加密，Word↔PDF（Cloudflare Containers），卡片式入口。',
+      path: '/pdf-tools',
+      available: true,
+      badge: '新',
+      category: 'office',
     },
     {
       id: 'file',

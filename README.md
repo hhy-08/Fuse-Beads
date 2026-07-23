@@ -62,6 +62,8 @@ npm run dev
 | `/image-converter` | 图片格式转换 |
 | `/unit-converter` | 单位转换 |
 | `/file-converter` | 文件转换（纯前端） |
+| `/pdf-tools` | PDF 工具站（卡片入口） |
+| `/pdf-tools/:toolId` | 单个 PDF 工具工作区 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -84,6 +86,7 @@ src/
     imageConverter/index.ts
     unitConverter/index.ts
     fileConverter/index.ts
+    pdfTools/index.ts
     about/index.ts
   store/
     index.ts              # Vuex 入口 + 持久化
@@ -97,6 +100,7 @@ src/
     imageConverter/index.vue # 图片格式转换
     unitConverter/index.vue  # 单位转换
     fileConverter/index.vue  # 文件转换
+    pdfTools/             # PDF 工具站（卡片 + 工具页）
     about/index.vue       # 关于页
   components/
     ControlPanel.vue
@@ -105,6 +109,7 @@ src/
     Env.ts                # 环境变量读取
     Brand.ts              # 品牌名 / 产品名常量
     ToolList.ts           # 首页工具列表配置
+    pdfTools/             # PDF 工具站配置与 API 客户端
     ImageCompress.ts      # 图片压缩（质量/缩放/GIF）
     ImageConverter.ts     # 图片格式转换
     UnitConverter.ts      # 单位换算
@@ -114,9 +119,157 @@ src/
     MardColors.ts          # MARD 291 色卡
     FontOptions.ts         # 可选采样字体
   styles/main.css
+server/                   # Cloudflare Workers + Containers（PDF API）
+  wrangler.toml
+  src/                    # Worker 入口与 pdf-lib 处理
+  container/              # LibreOffice / qpdf Dockerfile
 ```
 
+## PDF 后端（Cloudflare）
+
+前端 Pages 与后端 Worker 分离部署：
+
+1. **无 Docker（推荐当前）**：`npm run server:install && npm run server:deploy`  
+   → 合并 / 拆分 / 旋转 / 水印 / 图片转 PDF  
+2. 将返回的 `*.workers.dev` 写入 Pages 环境变量 `VITE_API_BASE_URL`，并重新部署前端  
+3. 以后有 Docker 再跑 `npm run server:deploy:full` 开启 Word↔PDF / 加密  
+
+详见 `server/README.md`。
+
+### 在 dash.cloudflare 上怎么部署
+
+项目拆成两个 Cloudflare 产品：
+
+| 部分 | 产品 | 地址示例 |
+|------|------|----------|
+| 前端 Vue | **Pages** | `https://fuse-beads.pages.dev` |
+| PDF API | **Workers + Containers** | `https://fuse-pdf-api.<账号>.workers.dev` |
+
+#### 一、前置条件
+
+1. 打开 [dash.cloudflare.com](https://dash.cloudflare.com) 并登录  
+2. 本机安装：**Node.js**、**Docker Desktop**（Containers 构建镜像必须开着）  
+3. 终端登录 Wrangler：
+
+```bash
+cd server
+npx wrangler login
+```
+
+浏览器授权后，CLI 才能往你的账号推 Worker / 镜像。
+
+#### 二、部署后端 API（Worker-only，无需 Docker）
+
+在本机终端（项目 `server/` 目录）：
+
+```bash
+cd /path/to/Fuse-Beads/server
+npm install --legacy-peer-deps
+npx wrangler login
+npm run deploy
+```
+
+成功后终端会打印形如：
+
+`https://fuse-pdf-api.<your-subdomain>.workers.dev`
+
+到 Dashboard 核对：
+
+1. **Workers & Pages** → 找到 `fuse-pdf-api`（与 Pages 的 `fuse-beads` 并列）  
+2. 浏览器访问：`https://fuse-pdf-api.<subdomain>.workers.dev/api/health`  
+   应返回 `ok: true`，`mode: "worker-only"`
+
+以后若安装了 Docker，再执行 `npm run deploy:full` 开启 Word↔PDF / 加密。
+
+说明：Worker-only **不需要** Docker；完整版 Containers 才需要。
+
+#### 三、部署 / 更新前端（Pages）
+
+**方式 A：Dashboard 连 Git（推荐，已有项目可跳过创建）**
+
+1. **Workers & Pages** → **Create** → **Pages** → Connect to Git  
+2. 选中本仓库；构建设置示例：  
+   - Build command：`npm run build`  
+   - Build output directory：`dist`  
+   - Root directory：仓库根目录（不是 `server/`）  
+3. **Settings → Environment variables**（Production）增加：  
+   - `VITE_API_BASE_URL` = `https://fuse-pdf-api.<subdomain>.workers.dev`  
+   - `VITE_ENV` = `prod`  
+   - `VITE_APP_TITLE` = `Fuse 工具箱`  
+   - `VITE_BASE_ROUTE` = `/`  
+4. 保存后 **Retry deployment** / 推送代码触发重新构建  
+
+**方式 B：本地构建后上传**
+
+```bash
+# 先改 .env.prod 里的 VITE_API_BASE_URL 为真实 API 地址
+npm run build
+npx wrangler pages deploy dist --project-name=fuse-beads
+```
+
+#### 四、前后端连通检查
+
+1. 打开 Pages 站点 → 进入 **PDF 工具站**  
+2. 顶部应显示「后端已连接」  
+3. 先测 **合并 PDF**（纯 Worker）；再测 **Word 转 PDF**（会起 Container）
+
+若提示跨域失败：到 Worker 的 `ALLOWED_ORIGINS` 补上实际前端域名（含自定义域），改完再 `npm run deploy` 或在 Dashboard Variables 里改后重新部署 Worker。
+
+#### 五、Dashboard 里日常能改什么
+
+- Pages：环境变量、自定义域、每次部署日志  
+- Worker：`ALLOWED_ORIGINS` / `MAX_UPLOAD_BYTES`、请求日志、Containers 实例概况  
+- 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
+
 ## 会话总结
+
+### 2026-07-23（同源 /api 绕过 workers.dev 超时）
+
+- **会话目的**：解决浏览器访问 `*.workers.dev` 连接超时（国内常见）。
+- **完成任务**：新增 Pages Functions `/api/*` + Service Binding `PDF_API` → `fuse-pdf-api`；前端改为默认同源调用。
+- **关键决策**：浏览器只访问 `fuse-beads.pages.dev/api/*`，由 CF 内网转发到 Worker，不经过公网 workers.dev。
+- **修改文件**：`functions/api/[[path]].ts`、`wrangler.toml`、`PdfApi.ts`、`.env.prod`、`pdfTools/index.vue`、`README.md`
+- **你需要做的**：
+  1. Pages → fuse-beads → 设置 → 绑定：添加服务绑定 `PDF_API` → `fuse-pdf-api`（若未从 wrangler.toml 自动生效）
+  2. 环境变量 `VITE_API_BASE_URL` **清空**或删除（不要再用 workers.dev）
+  3. 重新部署前端后访问 `https://fuse-beads.pages.dev/api/health`
+
+### 2026-07-23（fuse-pdf-api 首次部署成功）
+
+- **会话目的**：将 Worker-only 后端部署到 Cloudflare。
+- **完成任务**：`fuse-pdf-api` 已上线；`.env.prod` 写入真实 API 地址。
+- **关键决策**：当前 `ENABLE_CONTAINERS=0`，先用 P0 能力；Pages 需配置同名环境变量并重新部署。
+- **修改文件**：`.env.prod`、`README.md`
+- **API 地址**：https://fuse-pdf-api.2330600478-e1b.workers.dev
+
+### 2026-07-23（Worker-only 无 Docker 部署）
+
+- **会话目的**：本地无 Docker 时仍能把后端部署到 Cloudflare。
+- **完成任务**：默认改为 Worker-only；Containers 完整版拆到 `wrangler.containers.toml`；前端 Word↔PDF / 加密标为「需 Containers」。
+- **关键决策**：无 Docker 用 `npm run deploy`；有 Docker 再 `deploy:full`。
+- **修改文件**：`server/wrangler.toml`、`server/wrangler.containers.toml`、`server/src/**`、`PdfToolList.ts`、`pdfTools/index.vue`、`package.json`、`README.md`、`server/README.md`
+
+### 2026-07-23（dash.cloudflare 部署说明）
+
+- **会话目的**：说明如何在 Cloudflare Dashboard 上部署 PDF 前端与 API。
+- **完成任务**：补充 Pages + Workers/Containers 分步部署、环境变量与连通检查说明。
+- **关键决策**：Containers 必须经 Wrangler + Docker 发布；Dashboard 负责查看与改 Variables。
+- **修改文件**：`README.md`
+
+### 2026-07-23（PDF 工具站 + CF Containers）
+
+- **会话目的**：新建 `/pdf-tools` 卡片站，后端纯 Cloudflare（Workers + Containers）实现 P0 + Word↔PDF。
+- **完成任务**：
+  - 新增 `server/`：Worker API（合并/拆分/旋转/水印/图片转 PDF）+ LibreOffice 容器（Word↔PDF、qpdf 加密）
+  - 新增前端 `/pdf-tools` 卡片站与 `/pdf-tools/:toolId` 工作区
+  - 首页工具列表增加「PDF 工具站」入口；环境变量指向本地/远程 API
+- **关键决策**：
+  - P0 轻量操作用 `pdf-lib` 跑在 Worker；Office 转换与加密走 Containers
+  - PDF→JPG 继续浏览器本地 pdf.js，避免不必要上传
+  - 前后端分离部署，通过 `VITE_API_BASE_URL` + CORS 连接
+- **修改文件**：
+  - 新增 `server/**`、`src/views/pdfTools/**`、`src/router/pdfTools/**`、`src/utils/pdfTools/**`
+  - 更新 `ToolList.ts`、`.env.*`、`package.json`、`README.md`
 
 ### 2026-07-23（文本对比跳转过冲修复）
 

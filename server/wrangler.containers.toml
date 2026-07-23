@@ -1,0 +1,29 @@
+# Fuse PDF API —— 完整版（Workers + LibreOffice Containers）
+# 需要本机 Docker：npm run deploy:full
+name = "fuse-pdf-api"
+main = "src/index.containers.ts"
+compatibility_date = "2026-07-22"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[containers]]
+class_name = "LibreOfficeContainer"
+image = "./container/Dockerfile"
+image_build_context = "./container"
+instance_type = "standard-1"
+max_instances = 3
+
+[[durable_objects.bindings]]
+name = "LIBRE_OFFICE"
+class_name = "LibreOfficeContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LibreOfficeContainer"]
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,https://fuse-beads.pages.dev"
+MAX_UPLOAD_BYTES = "52428800"
+ENABLE_CONTAINERS = "1"

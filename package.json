@@ -13,7 +13,11 @@
     "build-prod": "node scripts/SyncPdfjsAssets.mjs && vue-tsc -b && vite build --mode prod",
     "preview": "vite preview",
     "postinstall": "node scripts/SyncPdfjsAssets.mjs",
-    "sync-pdfjs": "node scripts/SyncPdfjsAssets.mjs"
+    "sync-pdfjs": "node scripts/SyncPdfjsAssets.mjs",
+    "server:dev": "npm --prefix server run dev",
+    "server:deploy": "npm --prefix server run deploy",
+    "server:deploy:full": "npm --prefix server run deploy:full",
+    "server:install": "npm --prefix server install --legacy-peer-deps"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
