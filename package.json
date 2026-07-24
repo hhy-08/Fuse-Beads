@@ -26,10 +26,13 @@
   "dependencies": {
     "@bunnio/rembg-web": "^1.0.2",
     "browser-image-compression": "^2.0.2",
+    "dompurify": "^3.4.12",
     "gifuct-js": "^2.1.2",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
+    "marked": "^18.0.7",
     "onnxruntime-web": "^1.27.0",
     "pdfjs-dist": "^6.1.200",
     "qrcode": "^1.5.4",

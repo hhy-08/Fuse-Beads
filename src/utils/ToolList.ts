@@ -49,7 +49,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'office',
       name: '文本 / 日常办公小工具',
-      description: 'PDF 工具站、JSON 格式化、文本对比、文件转换、二维码等办公效率工具。',
+      description: 'PDF 工具站、JSON / Markdown 卡片、文本对比、文件转换、二维码等办公效率工具。',
     },
     {
       id: 'life',
@@ -228,6 +228,16 @@ export function GetToolList(): ToolItem[] {
       description:
         '校验、美化、压缩 JSON；支持 stringify 转义与树形展开，解析失败可本地 AI 修复。',
       path: '/json-formatter',
+      available: true,
+      badge: '新',
+      category: 'office',
+    },
+    {
+      id: 'markdown-card',
+      name: 'Markdown 卡片生成',
+      description:
+        '粘贴 Markdown 渲染精美卡片样式，导出图片，适合社交平台分享代码、笔记。',
+      path: '/markdown-card',
       available: true,
       badge: '新',
       category: 'office',

@@ -266,6 +266,20 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（Markdown 卡片生成）
+
+- **会话目的**：新增「Markdown 卡片生成」工具，粘贴 Markdown 渲染精美卡片并导出图片，便于社交分享。
+- **完成任务**：
+  - 基于 `marked` + `DOMPurify` 渲染安全 HTML；`html2canvas` 导出 PNG / JPEG
+  - 提供墨纸 / 夜码 / 海雾 / 松青四套主题，可调宽度、清晰度与页脚水印
+  - 注册路由 `/markdown-card`，加入「文本 / 日常办公」分类
+- **关键决策**：
+  - 主题配色对齐 Fuse Kit 蓝系与青绿，避免默认紫白渐变；大图导出默认 2x
+  - 依赖直装 `marked` / `dompurify` / `html2canvas`（后者此前为 jspdf 传递依赖）
+- **修改文件**：
+  - 新增 `src/utils/MarkdownCard.ts`、`src/views/markdownCard/index.vue`、`src/router/markdownCard/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`src/utils/Brand.ts`、`package.json`、`README.md`
+
 ### 2026-07-24（Cloudflare Pages 单文件 25MiB 限制）
 
 - **会话目的**：修复 Pages 部署校验失败：`ort-wasm-simd-threaded.jsep.wasm` 约 25.6MiB 超限。
