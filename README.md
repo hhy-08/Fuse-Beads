@@ -232,6 +232,13 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-24（JSON 页顶部样式对齐）
+
+- **会话目的**：JSON 格式化页顶部 hero 与其它工具页保持一致。
+- **完成任务**：改为深蓝渐变头图、大号品牌字、胶囊导航链接样式。
+- **关键决策**：对齐 `textDiff` / `imageMatting` 的 hero 样式规范。
+- **修改文件**：`src/views/jsonFormatter/index.vue`、`README.md`
+
 ### 2026-07-24（JSON 树形展开收起）
 
 - **会话目的**：解析结果增加与参考图一致的折叠树形视图。
