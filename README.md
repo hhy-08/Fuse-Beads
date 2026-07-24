@@ -23,6 +23,7 @@
 - JSON 格式化：校验 / 美化 / 压缩；支持 stringify 转义字符串；树形展开收起；解析失败可「AI 修复」（本地智能纠错）
 - 拾色器：屏幕取色，HEX / RGB / HSL / 透明度互转，自定义调色板本地保存
 - 时间戳转换：秒 / 毫秒与多时区本地时间互转（含非洲多国），支持批量转换与复制记录
+- 世界时钟：实时查看各国当前时间（模拟表盘 + 上午/下午等时段），支持大洲筛选、搜索与收藏
 - AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
@@ -73,6 +74,7 @@ npm run dev
 | `/unit-converter` | 单位转换 |
 | `/color-picker` | 拾色器（色值转换） |
 | `/timestamp-converter` | 时间戳转换 |
+| `/world-clock` | 世界时钟（各国时间） |
 | `/file-converter` | 文件转换（纯前端） |
 | `/pdf-tools` | PDF 工具站（卡片入口） |
 | `/pdf-tools/:toolId` | 单个 PDF 工具工作区 |
@@ -235,6 +237,30 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（世界时钟各国时间）
+
+- **会话目的**：新增各国当前时间展示工具。
+- **完成任务**：
+  - 复用时区列表，秒级刷新展示日期 / 时间 / 星期 / 偏移
+  - 支持大洲筛选、搜索、收藏与复制；昼夜卡片样式区分
+  - 注册路由 `/world-clock`，加入「趣味生活」分类
+- **修改文件**：
+  - 新增 `src/utils/WorldClock.ts`、`src/views/worldClock/index.vue`、`src/router/worldClock/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-24（世界时钟模拟表盘与时段）
+
+- **会话目的**：在世界时钟基础上增加钟表样式，并标明上午/下午等时段。
+- **完成任务**：
+  - 每张卡片增加模拟表盘（时/分/秒针随当地时间转动）
+  - 展示中文时段（凌晨/清晨/上午/中午/下午/傍晚/晚上）与上午/下午标签
+  - 同步显示 24 小时制与 12 小时制数字时间，昼夜样式区分
+- **关键决策**：
+  - 时段与指针角度在 `WorldClock.ts` 统一计算，卡片抽成 `WorldClockCard.vue` 避免重复模板
+- **修改文件**：
+  - 更新 `src/utils/WorldClock.ts`、`src/views/worldClock/index.vue`、`README.md`
+  - 新增 `src/views/worldClock/WorldClockCard.vue`
 
 ### 2026-07-24（时间戳时区扩充非洲等）
 

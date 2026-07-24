@@ -54,7 +54,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'life',
       name: '趣味 & 生活实用工具',
-      description: '单位换算、拾色器、时间戳转换等轻量实用小工具，随用随开。',
+      description: '单位换算、拾色器、时间戳转换、世界时钟等轻量实用小工具，随用随开。',
     },
   ]
 }
@@ -255,6 +255,15 @@ export function GetToolList(): ToolItem[] {
       description:
         '秒 / 毫秒时间戳与北京时间互相转换，支持非洲等多时区、批量转换与复制记录。',
       path: '/timestamp-converter',
+      available: true,
+      badge: '新',
+      category: 'life',
+    },
+    {
+      id: 'world-clock',
+      name: '世界时钟（各国时间）',
+      description: '实时查看各国当前时间，支持按大洲筛选、搜索与收藏常用城市。',
+      path: '/world-clock',
       available: true,
       badge: '新',
       category: 'life',
