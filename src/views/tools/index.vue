@@ -88,11 +88,8 @@ export default defineComponent({
 <style scoped>
 .tools-page {
   min-height: 100vh;
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background:
     radial-gradient(900px 420px at 12% -8%, rgba(84, 148, 255, 0.1), transparent 55%),
     linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
@@ -100,7 +97,6 @@ export default defineComponent({
 
 .tools-main {
   flex: 1;
-  min-height: 0;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -109,7 +105,6 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 28px;
-  overflow: auto;
 }
 
 .tool-group {
@@ -246,18 +241,6 @@ export default defineComponent({
 }
 
 @media (max-width: 700px) {
-  .tools-page {
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
-  }
-
-  
-
-  .tools-main {
-    overflow: visible;
-  }
-
   .group-header {
     flex-direction: column;
     align-items: flex-start;

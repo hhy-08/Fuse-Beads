@@ -69,7 +69,9 @@ export default defineComponent({
 
 <style scoped>
 .hero {
-  position: relative;
+  /* 随页面滚动，不使用 fixed / sticky */
+  position: static;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;

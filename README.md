@@ -240,6 +240,16 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-24（ToolPageHero 顶部栏不固定）
+
+- **会话目的**：顶部 Hero 随页面滚动，不做吸顶/视口锁定。
+- **完成任务**：
+  - `ToolPageHero` 明确 `position: static`，禁止 fixed/sticky
+  - 工具列表、JSON 格式化去掉 `100vh + overflow:hidden` 布局，改为整页滚动
+- **关键决策**：页面级滚动优先，避免「仅主内容区滚动导致顶部看似固定」
+- **修改文件**：
+  - 更新 `src/components/ToolPageHero.vue`、`src/views/tools/index.vue`、`src/views/jsonFormatter/index.vue`、`README.md`
+
 ### 2026-07-24（抽取 ToolPageHero 公用组件）
 
 - **会话目的**：将各工具页重复的顶部 hero 抽成公用组件，统一品牌区与导航。

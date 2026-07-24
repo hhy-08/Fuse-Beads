@@ -623,11 +623,8 @@ export default defineComponent({
 <style scoped>
 .json-page {
   min-height: 100vh;
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background:
     radial-gradient(900px 420px at 12% -8%, rgba(84, 148, 255, 0.1), transparent 55%),
     linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
@@ -635,7 +632,6 @@ export default defineComponent({
 
 .workspace {
   flex: 1;
-  min-height: 0;
   width: 100%;
   margin: 0;
   padding: 16px 20px 20px;
@@ -643,7 +639,6 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
 }
 
 .toolbar {
@@ -814,11 +809,11 @@ export default defineComponent({
 
 .editors {
   flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: stretch;
+  min-height: min(62vh, 560px);
 }
 
 .editor-pane {
@@ -830,8 +825,7 @@ export default defineComponent({
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  min-height: 0;
-  height: 100%;
+  min-height: 360px;
   overflow: hidden;
 }
 
@@ -876,7 +870,7 @@ export default defineComponent({
 .tree-panel {
   width: 100%;
   flex: 1;
-  min-height: 0;
+  min-height: 280px;
   border: 1px solid rgba(49, 65, 95, 0.18);
   border-radius: 12px;
   background: #fff;
@@ -943,18 +937,6 @@ export default defineComponent({
 }
 
 @media (max-width: 860px) {
-  .json-page {
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
-  }
-
-  
-
-  .workspace {
-    overflow: visible;
-  }
-
   .editors {
     grid-template-columns: 1fr;
     flex: none;
