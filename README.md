@@ -20,6 +20,7 @@
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
+- JSON 格式化：校验 / 美化 / 压缩；支持普通 JSON 与后端 `JSON.stringify` 转义字符串；解析结果可树形展开 / 收起浏览
 - AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
@@ -71,6 +72,7 @@ npm run dev
 | `/file-converter` | 文件转换（纯前端） |
 | `/pdf-tools` | PDF 工具站（卡片入口） |
 | `/pdf-tools/:toolId` | 单个 PDF 工具工作区 |
+| `/json-formatter` | JSON 格式化 / 校验 |
 | `/about` | 关于页 |
 
 ## 项目结构
@@ -229,6 +231,32 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（JSON 树形展开收起）
+
+- **会话目的**：解析结果增加与参考图一致的折叠树形视图。
+- **完成任务**：
+  - 新增递归 `JsonTreeNode`：三角展开/收起、折叠摘要 `{...} // N items`、语法高亮、行选中高亮
+  - 右侧支持「树形 / 文本」切换，以及全部展开 / 全部收起
+  - 主操作改为「解析 / 美化」，默认进入树形浏览
+- **关键决策**：折叠状态用路径 map 管理，便于全局展开收起；复制/下载仍使用美化后的纯文本。
+- **修改文件**：
+  - 新增 `src/views/jsonFormatter/components/JsonTreeNode.vue`
+  - 更新 `src/utils/JsonFormatter.ts`、`src/views/jsonFormatter/index.vue`、`README.md`
+
+### 2026-07-24（JSON 格式化工具）
+
+- **会话目的**：新增 JSON 格式化校验与美化工具，兼容普通 JSON 与后端 stringify 字符串。
+- **完成任务**：
+  - 实现解析 / 校验 / 美化 / 压缩 / 转义字符串，支持多层 `JSON.stringify` 自动解包
+  - 新增工具页：双栏输入输出、缩进切换、粘贴/复制/上传/下载
+  - 注册路由 `/json-formatter`，并加入首页「文本办公」分类
+- **关键决策**：
+  - 先 `JSON.parse`，若结果仍是 JSON 形态字符串则继续解包（上限 8 层）
+  - 逻辑集中在 `JsonFormatter.ts`，页面保持 Options API 与现有工具页风格一致
+- **修改文件**：
+  - 新增 `src/utils/JsonFormatter.ts`、`src/views/jsonFormatter/index.vue`、`src/router/jsonFormatter/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-24（通用高清下载失败 / CORS）
 

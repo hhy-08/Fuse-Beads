@@ -213,6 +213,16 @@ export function GetToolList(): ToolItem[] {
       category: 'office',
     },
     {
+      id: 'json-formatter',
+      name: 'JSON 格式化',
+      description:
+        '校验、美化、压缩 JSON；支持普通对象与后端 JSON.stringify 转义字符串，解析结果可树形展开收起。',
+      path: '/json-formatter',
+      available: true,
+      badge: '新',
+      category: 'office',
+    },
+    {
       id: 'qrcode',
       name: '二维码生成',
       description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
