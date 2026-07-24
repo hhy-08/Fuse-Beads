@@ -634,17 +634,24 @@ export default defineComponent({
 <style scoped>
 .json-page {
   min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(84, 148, 255, 0.1), transparent 55%),
+    linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
 }
 
 .hero {
   position: relative;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  padding: 48px 6vw 36px;
+  padding: 36px 6vw 28px;
   background:
     radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
     radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
@@ -702,15 +709,19 @@ export default defineComponent({
 
 .workspace {
   flex: 1;
-  width: min(1180px, 100%);
-  margin: 0 auto;
-  padding: 28px 6vw 48px;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  overflow: hidden;
 }
 
 .toolbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -718,7 +729,7 @@ export default defineComponent({
   flex-wrap: wrap;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(49, 65, 95, 0.1);
 }
 
@@ -801,6 +812,7 @@ export default defineComponent({
 }
 
 .status {
+  flex-shrink: 0;
   margin: 0;
   padding: 10px 14px;
   border-radius: 10px;
@@ -875,23 +887,30 @@ export default defineComponent({
 }
 
 .editors {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: stretch;
 }
 
 .editor-pane {
   padding: 14px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(49, 65, 95, 0.1);
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .pane-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -930,7 +949,8 @@ export default defineComponent({
 .editor,
 .tree-panel {
   width: 100%;
-  min-height: 420px;
+  flex: 1;
+  min-height: 0;
   border: 1px solid rgba(49, 65, 95, 0.18);
   border-radius: 12px;
   background: #fff;
@@ -938,7 +958,7 @@ export default defineComponent({
 }
 
 .editor {
-  resize: vertical;
+  resize: none;
   padding: 12px;
   font: 0.88rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: #1f2a3d;
@@ -956,19 +976,20 @@ export default defineComponent({
 .tree-panel {
   padding: 10px 8px;
   overflow: auto;
-  max-height: min(70vh, 720px);
 }
 
 .meta {
+  flex-shrink: 0;
   margin: 0;
   color: #6a7a94;
   font-size: 0.82rem;
 }
 
 .tips-card {
-  padding: 16px 18px;
+  flex-shrink: 0;
+  padding: 12px 16px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(49, 65, 95, 0.1);
 }
 
@@ -996,18 +1017,35 @@ export default defineComponent({
 }
 
 @media (max-width: 860px) {
+  .json-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
   .hero {
     flex-direction: column;
     align-items: flex-start;
   }
 
+  .workspace {
+    overflow: visible;
+  }
+
   .editors {
     grid-template-columns: 1fr;
+    flex: none;
+  }
+
+  .editor-pane {
+    height: auto;
+    min-height: 320px;
   }
 
   .editor,
   .tree-panel {
-    min-height: 260px;
+    min-height: 280px;
+    flex: none;
   }
 }
 </style>

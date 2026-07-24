@@ -232,6 +232,18 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-24（JSON 工作区默认铺满）
+
+- **会话目的**：去掉全屏按钮，工作区默认占满顶部下方剩余视口，保留 hero。
+- **完成任务**：移除全屏切换逻辑；页面 `100vh` 分栏，编辑区自适应拉高。
+- **修改文件**：`src/views/jsonFormatter/index.vue`、`README.md`
+
+### 2026-07-24（JSON 工作区全屏）
+
+- **会话目的**：JSON 格式化工作区支持全屏展示。
+- **完成任务**：工具栏增加「全屏 / 退出全屏」；Esc 退出；全屏时编辑区拉高并隐藏说明卡片。
+- **修改文件**：`src/views/jsonFormatter/index.vue`、`README.md`
+
 ### 2026-07-24（AI 修复按钮可点）
 
 - **会话目的**：解析失败时确保「AI 修复」可点击、更醒目。
