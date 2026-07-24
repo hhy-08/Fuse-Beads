@@ -266,6 +266,18 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（SVG 转图片）
+
+- **会话目的**：新增 SVG 转 PNG / JPG / WEBP 工具。
+- **完成任务**：
+  - 支持本地上传、拖放、URL 导入（需 CORS）
+  - 可自定义宽高、锁定比例、倍率预设；JPEG/WebP 可调质量
+  - 注册路由 `/svg-to-image`，加入「图片类工具」
+- **关键决策**：Canvas 渲染导出；单边最大 8192px；JPEG 默认白底
+- **修改文件**：
+  - 新增 `src/utils/SvgToImage.ts`、`src/views/svgToImage/index.vue`、`src/router/svgToImage/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
+
 ### 2026-07-24（二维码 tabs 与内容间距）
 
 - **会话目的**：收紧 `mode-tabs` 与下方解码/生成面板的垂直间隔。

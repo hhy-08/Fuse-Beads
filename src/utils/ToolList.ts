@@ -44,7 +44,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'image',
       name: '图片类工具',
-      description: '裁剪、拼接、压缩、水印、AI 抠图、格式转换等常见图片处理。',
+      description: '裁剪、拼接、压缩、水印、AI 抠图、SVG 转图片、格式转换等常见图片处理。',
     },
     {
       id: 'office',
@@ -173,6 +173,16 @@ export function GetToolList(): ToolItem[] {
       path: '/image-converter',
       available: true,
       badge: '可用',
+      category: 'image',
+    },
+    {
+      id: 'svg-to-image',
+      name: 'SVG 转图片',
+      description:
+        'SVG 转 PNG / JPG / WEBP，可自定义输出尺寸，支持拖放与 URL 导入。',
+      path: '/svg-to-image',
+      available: true,
+      badge: '新',
       category: 'image',
     },
     {
