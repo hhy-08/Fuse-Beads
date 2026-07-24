@@ -21,35 +21,48 @@ const MODELLIST = [
   {
     id: 'u2netp',
     fileName: 'u2netp.onnx',
-    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
+    urls: [
+      'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/u2netp.onnx?download=true',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
+    ],
     minBytes: 4 * 1024 * 1024,
     group: 'light',
   },
   {
     id: 'silueta',
     fileName: 'silueta.onnx',
-    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx',
+    urls: [
+      'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/silueta.onnx?download=true',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx',
+    ],
     minBytes: 40 * 1024 * 1024,
     group: 'detail',
   },
   {
     id: 'isnet-anime',
     fileName: 'isnet-anime.onnx',
-    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
+    urls: [
+      'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/isnet-anime.onnx?download=true',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
+    ],
     minBytes: 160 * 1024 * 1024,
     group: 'poster',
   },
   {
     id: 'isnet-general-use',
     fileName: 'isnet-general-use.onnx',
-    url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
+    urls: [
+      'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx?download=true',
+      'https://hf-mirror.com/SacredNoir/isnet-general-use-onnx/resolve/main/isnet-general-use.onnx?download=true',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
+    ],
     minBytes: 160 * 1024 * 1024,
     group: 'detail',
   },
 ]
 
 /**
- * 下载单个模型文件
+ * 下载单个模型文件（多镜像按序尝试）
  * @param item 模型项
  * @param force 是否强制重下
  */
@@ -65,20 +78,40 @@ async function DownloadModel(item, force = false) {
     }
   }
 
-  console.log(`[FetchMattingModels] 下载 ${item.fileName} …`)
-  const response = await fetch(item.url, {
-    redirect: 'follow',
-    headers: { 'User-Agent': 'fuse-kit-matting-fetch' },
-  })
-  if (!response.ok || !response.body) {
-    throw new Error(`下载失败 ${item.fileName}: HTTP ${response.status}`)
-  }
-
   mkdirSync(targetDir, { recursive: true })
-  await pipeline(response.body, createWriteStream(targetPath))
-  const size = statSync(targetPath).size
-  console.log(
-    `[FetchMattingModels] 完成 ${item.fileName} (${(size / 1024 / 1024).toFixed(2)}MB)`,
+  const urls = item.urls || (item.url ? [item.url] : [])
+  let lastError = null
+  for (let i = 0; i < urls.length; i += 1) {
+    const url = urls[i]
+    try {
+      console.log(
+        `[FetchMattingModels] 下载 ${item.fileName}（镜像 ${i + 1}/${urls.length}）…`,
+      )
+      const response = await fetch(url, {
+        redirect: 'follow',
+        headers: { 'User-Agent': 'fuse-kit-matting-fetch' },
+      })
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      await pipeline(response.body, createWriteStream(targetPath))
+      const size = statSync(targetPath).size
+      if (size < item.minBytes) {
+        throw new Error(`文件过小 ${(size / 1024 / 1024).toFixed(2)}MB`)
+      }
+      console.log(
+        `[FetchMattingModels] 完成 ${item.fileName} (${(size / 1024 / 1024).toFixed(2)}MB)`,
+      )
+      return
+    } catch (error) {
+      lastError = error
+      console.warn(
+        `[FetchMattingModels] 镜像失败: ${error instanceof Error ? error.message : error}`,
+      )
+    }
+  }
+  throw new Error(
+    `下载失败 ${item.fileName}: ${lastError instanceof Error ? lastError.message : lastError}`,
   )
 }
 

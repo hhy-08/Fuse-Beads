@@ -90,28 +90,38 @@ const MODELMINBYTES: Record<MattingModelId, number> = {
   'isnet-general-use': 160 * 1024 * 1024,
 }
 
-/** 各模型远程镜像（本地缺失时按序尝试，浏览器端按需下载） */
+/** 各模型远程镜像（浏览器需 CORS；优先 hf-mirror，避开 huggingface.co 墙与 GitHub 无 CORS） */
 const MODELMIRRORS: Record<MattingModelId, string[]> = {
   u2netp: [
-    'https://ghfast.top/https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
-    'https://huggingface.co/fofr/comfyui/resolve/main/rembg/u2netp.onnx?download=true',
-    'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
+    'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/u2netp.onnx?download=true',
+    'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2netp.onnx?download=true',
   ],
   silueta: [
-    'https://ghfast.top/https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx',
-    'https://huggingface.co/fofr/comfyui/resolve/main/rembg/silueta.onnx?download=true',
-    'https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx',
+    'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/silueta.onnx?download=true',
+    'https://huggingface.co/tomjackson2023/rembg/resolve/main/silueta.onnx?download=true',
   ],
   'isnet-anime': [
-    'https://ghfast.top/https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
-    'https://huggingface.co/fofr/comfyui/resolve/main/rembg/isnet-anime.onnx?download=true',
-    'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
+    'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/isnet-anime.onnx?download=true',
+    'https://hf-mirror.com/skytnt/anime-seg/resolve/main/isnetis.onnx?download=true',
+    'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-anime.onnx?download=true',
   ],
   'isnet-general-use': [
-    'https://ghfast.top/https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
-    'https://huggingface.co/fofr/comfyui/resolve/main/rembg/isnet-general-use.onnx?download=true',
-    'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
+    'https://hf-mirror.com/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx?download=true',
+    'https://hf-mirror.com/SacredNoir/isnet-general-use-onnx/resolve/main/isnet-general-use.onnx?download=true',
+    'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx?download=true',
   ],
+}
+
+/**
+ * 组装下载地址列表：同源代理优先（Vite/Pages 转发，彻底避开 CORS），再试公开镜像
+ * @param modelId 模型 id
+ * @returns URL 列表
+ */
+function GetModelDownloadUrls(modelId: MattingModelId): string[] {
+  const proxyUrl = BuildPublicAssetUrl(
+    `matting-proxy?id=${encodeURIComponent(modelId)}`,
+  )
+  return [proxyUrl, ...(MODELMIRRORS[modelId] || [])]
 }
 
 /** 已解析为 blob URL 的按需模型（避免被 GC） */
@@ -360,38 +370,91 @@ export async function CheckMattingModelReady(
 }
 
 /**
- * 带进度下载二进制
+ * 带进度下载二进制；无 content-length 时按预估体积估算进度；停滞超时中止
  * @param url 地址
  * @param onProgress 进度 0~100
+ * @param stallTimeoutMs 无数据流入超时（毫秒）
  * @returns ArrayBuffer
  */
 async function FetchArrayBufferWithProgress(
   url: string,
   onProgress?: (percent: number) => void,
+  stallTimeoutMs = 90000,
 ): Promise<ArrayBuffer> {
-  const response = await fetch(url, { redirect: 'follow' })
+  const controller = new AbortController()
+  let timer = window.setTimeout(() => controller.abort(), stallTimeoutMs)
+
+  /**
+   * 收到数据后重置停滞计时器
+   */
+  const ResetStallTimer = () => {
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => controller.abort(), stallTimeoutMs)
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      redirect: 'follow',
+      signal: controller.signal,
+    })
+  } catch (error) {
+    window.clearTimeout(timer)
+    if (
+      (error instanceof DOMException && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
+      throw new Error('下载超时（长时间无响应），请换镜像或检查网络')
+    }
+    throw error
+  }
+
   if (!response.ok) {
+    window.clearTimeout(timer)
     throw new Error(`HTTP ${response.status}`)
   }
+
   const total = Number(response.headers.get('content-length') || 0)
-  if (!response.body || !total) {
-    return response.arrayBuffer()
+  const estimatedTotal = total || 180 * 1024 * 1024
+
+  if (!response.body) {
+    window.clearTimeout(timer)
+    const buffer = await response.arrayBuffer()
+    onProgress?.(100)
+    return buffer
   }
+
   const reader = response.body.getReader()
   const chunks: Uint8Array[] = []
   let received = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      break
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      ResetStallTimer()
+      if (done) {
+        break
+      }
+      if (!value) {
+        continue
+      }
+      chunks.push(value)
+      received += value.length
+      onProgress?.(
+        Math.min(99, Math.round((received / estimatedTotal) * 100)),
+      )
     }
-    if (!value) {
-      continue
+  } catch (error) {
+    if (
+      (error instanceof DOMException && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
+      throw new Error('下载超时（长时间无响应），请换镜像或检查网络')
     }
-    chunks.push(value)
-    received += value.length
-    onProgress?.(Math.min(99, Math.round((received / total) * 100)))
+    throw error
+  } finally {
+    window.clearTimeout(timer)
   }
+
   const merged = new Uint8Array(received)
   let offset = 0
   for (const chunk of chunks) {
@@ -446,7 +509,7 @@ export async function EnsureMattingModelReady(
   }
 
   if (!buffer || !IsValidOnnxBuffer(buffer, modelId)) {
-    const mirrors = MODELMIRRORS[modelId] || []
+    const mirrors = GetModelDownloadUrls(modelId)
     let lastError: unknown = null
     buffer = null
     for (let i = 0; i < mirrors.length; i += 1) {
@@ -455,7 +518,7 @@ export async function EnsureMattingModelReady(
         onProgress?.({
           step: 'downloading',
           progress: 1,
-          message: `正在下载模型（镜像 ${i + 1}/${mirrors.length}）${GetModelSizeHint(modelId)}…`,
+          message: `正在下载模型（源 ${i + 1}/${mirrors.length}）${GetModelSizeHint(modelId)}…`,
         })
         const downloaded = await FetchArrayBufferWithProgress(mirror, (percent) => {
           onProgress?.({
@@ -481,7 +544,7 @@ export async function EnsureMattingModelReady(
       throw new Error(
         `模型下载失败（${GetModelSizeHint(modelId)}）。${
           lastError instanceof Error ? lastError.message : '请检查网络后重试'
-        }`,
+        }。也可执行 npm run sync-matting 预置到 public/models`,
       )
     }
   } else {
@@ -716,10 +779,12 @@ export function FormatMattingError(
     lower.includes('network') ||
     lower.includes('download') ||
     lower.includes('err_connection') ||
-    lower.includes('timed out')
+    lower.includes('timed out') ||
+    lower.includes('超时') ||
+    lower.includes('cors')
   ) {
     const sizeHint = GetModelSizeHint(modelId) || '~模型'
-    return `模型加载失败（${sizeHint}）。请切换档位后等待自动下载完成，或检查网络后重试。`
+    return `模型下载失败（${sizeHint}）。请改用「轻量」或执行 npm run sync-matting 预置本地模型后重试。`
   }
   if (
     lower.includes('no available backend') ||
@@ -755,202 +820,71 @@ async function BlobToCanvas(source: Blob): Promise<HTMLCanvasElement> {
 }
 
 /**
- * 将多个模型输出按像素取最大值融合（U2Net 族侧输出）
+ * 取模型主输出（U2Net d0 / ISNet 主分支），忽略深监督侧输出
+ * @param _modelId 模型 id（保留参数便于调用处统一）
  * @param outputs ORT 输出表
- * @returns 融合后的 mask
- */
-function MergeMaxMaskOutputs(outputs: Record<string, { data: Float32Array | Float64Array | Int32Array | Uint8Array }>): Float32Array {
-  const keys = Object.keys(outputs)
-  if (!keys.length) {
-    throw new Error('模型未返回蒙版输出')
-  }
-  const first = outputs[keys[0]].data
-  const merged = new Float32Array(first.length)
-  merged.set(first as ArrayLike<number>)
-  for (let k = 1; k < keys.length; k += 1) {
-    const data = outputs[keys[k]].data
-    if (data.length !== merged.length) {
-      continue
-    }
-    for (let i = 0; i < merged.length; i += 1) {
-      const value = Number(data[i])
-      if (value > merged[i]) {
-        merged[i] = value
-      }
-    }
-  }
-  return merged
-}
-
-/**
- * 挑选对比度最高的单一输出（isnet 等单主输出模型更稳）
- * @param outputs ORT 输出表
- * @returns mask
- */
-function PickBestMaskOutput(outputs: Record<string, { data: Float32Array | Float64Array | Int32Array | Uint8Array }>): Float32Array {
-  const keys = Object.keys(outputs)
-  if (!keys.length) {
-    throw new Error('模型未返回蒙版输出')
-  }
-  let bestKey = keys[0]
-  let bestScore = -1
-  for (const key of keys) {
-    const data = outputs[key].data
-    let min = Number(data[0])
-    let max = min
-    let sum = 0
-    for (let i = 0; i < data.length; i += 1) {
-      const value = Number(data[i])
-      if (value < min) min = value
-      if (value > max) max = value
-      sum += value
-    }
-    const mean = sum / data.length
-    let variance = 0
-    for (let i = 0; i < data.length; i += 1) {
-      const diff = Number(data[i]) - mean
-      variance += diff * diff
-    }
-    const score = variance / data.length + (max - min)
-    if (score > bestScore) {
-      bestScore = score
-      bestKey = key
-    }
-  }
-  const source = outputs[bestKey].data
-  const copied = new Float32Array(source.length)
-  copied.set(source as ArrayLike<number>)
-  return copied
-}
-
-/**
- * 按模型选择蒙版融合策略
- * @param modelId 模型
- * @param outputs 输出
- * @returns mask
+ * @returns 主 mask
  */
 function BuildMaskFromOutputs(
-  modelId: MattingModelId,
-  outputs: Record<string, { data: Float32Array | Float64Array | Int32Array | Uint8Array }>,
+  _modelId: MattingModelId,
+  outputs: Record<
+    string,
+    { data: Float32Array | Float64Array | Int32Array | Uint8Array }
+  >,
 ): Float32Array {
-  if (modelId === 'isnet-anime' || modelId === 'isnet-general-use') {
-    return PickBestMaskOutput(outputs)
+  const keys = Object.keys(outputs)
+  if (!keys.length) {
+    throw new Error('模型未返回蒙版输出')
   }
-  return MergeMaxMaskOutputs(outputs)
+  // 优先按常见主输出名取值；否则取 ORT 图定义顺序的第一个
+  const preferred =
+    keys.find((key) => /^(d0|output|mask|saliency)$/i.test(key)) || keys[0]
+  const source = outputs[preferred].data
+  const out = new Float32Array(source.length)
+  out.set(source as ArrayLike<number>)
+  return out
 }
 
 /**
- * 百分位裁剪后归一化到 0~1（避免极值把主体压成半透明灰）
+ * 确保 mask 落在 0~1；仅在模型未内置 sigmoid 时兜底，不做 min-max 拉伸
  * @param mask 原始 mask
- * @param usePercentile 是否用 2%~98% 百分位
- * @returns 归一化 mask
+ * @returns 0~1 概率 mask
  */
-function NormalizeMaskValues(
-  mask: Float32Array,
-  usePercentile = false,
-): Float32Array {
+function EnsureProbabilityMask(mask: Float32Array): Float32Array {
   let min = mask[0]
   let max = mask[0]
-  if (usePercentile && mask.length > 64) {
-    const sampleStep = Math.max(1, Math.floor(mask.length / 4096))
-    const samples: number[] = []
-    for (let i = 0; i < mask.length; i += sampleStep) {
-      samples.push(mask[i])
-    }
-    samples.sort((a, b) => a - b)
-    const lowIndex = Math.floor(samples.length * 0.02)
-    const highIndex = Math.floor(samples.length * 0.98)
-    min = samples[lowIndex]
-    max = samples[Math.max(lowIndex + 1, highIndex)]
-  } else {
-    for (let i = 1; i < mask.length; i += 1) {
-      const value = mask[i]
-      if (value < min) min = value
-      if (value > max) max = value
-    }
+  for (let i = 1; i < mask.length; i += 1) {
+    if (mask[i] < min) min = mask[i]
+    if (mask[i] > max) max = mask[i]
   }
-  const range = max - min || 1
-  const normalized = new Float32Array(mask.length)
+  // 已是概率分布则原样返回，不做任何拉伸
+  if (min >= -0.01 && max <= 1.01) {
+    return mask
+  }
+  // 疑似 logits，走 sigmoid 而非 min-max
+  const out = new Float32Array(mask.length)
   for (let i = 0; i < mask.length; i += 1) {
-    const value = (mask[i] - min) / range
-    normalized[i] = Math.min(1, Math.max(0, value))
+    out[i] = 1 / (1 + Math.exp(-mask[i]))
   }
-  return normalized
+  return out
 }
 
 /**
- * 锐化 alpha：压缩中间灰带；preserve 更宽松以保留半透明细节
- * @param alpha 0~1
- * @param low 低于此视为背景
- * @param high 高于此视为前景
- * @returns 锐化后 alpha
- */
-function HardenAlphaValue(alpha: number, low: number, high: number): number {
-  if (alpha <= low) {
-    return 0
-  }
-  if (alpha >= high) {
-    return 1
-  }
-  const t = (alpha - low) / (high - low)
-  // smoothstep
-  return t * t * (3 - 2 * t)
-}
-
-/**
- * 获取模型对应的 alpha 处理档位
- * @param modelId 模型 id
- * @returns 锐化档
- */
-function GetHardenMode(
-  modelId: MattingModelId,
-): 'preserve' | 'light' | 'strong' {
-  // isnet 对复杂 3D 海报字常输出中灰蒙版，需抬升并收紧，否则主体发虚镂空
-  if (modelId === 'isnet-anime' || modelId === 'isnet-general-use') {
-    return 'strong'
-  }
-  if (modelId === 'silueta') {
-    return 'strong'
-  }
-  return 'light'
-}
-
-/**
- * 用归一化 mask 对原图做抠图，并按档位处理 alpha
+ * 用 float mask 双线性采样到原图像素，温和压缩两端噪声后合成透明 PNG
  * @param imageCanvas 原图
- * @param mask 模型分辨率归一化 mask
+ * @param mask 模型分辨率 0~1 mask
  * @param modelSide 模型边长
- * @param harden 锐化强度档
  * @returns PNG Blob
  */
 async function CutoutWithMask(
   imageCanvas: HTMLCanvasElement,
   mask: Float32Array,
   modelSide: number,
-  harden: 'preserve' | 'light' | 'strong',
 ): Promise<Blob> {
   const side = modelSide > 0 ? modelSide : Math.round(Math.sqrt(mask.length))
-  const maskCanvas = document.createElement('canvas')
-  maskCanvas.width = side
-  maskCanvas.height = side
-  const maskCtx = maskCanvas.getContext('2d')
-  if (!maskCtx) {
-    throw new Error('无法创建蒙版画布')
-  }
-  const imageData = maskCtx.createImageData(side, side)
-  const pixelCount = side * side
-  for (let i = 0; i < pixelCount; i += 1) {
-    const value = Math.round(Math.min(1, Math.max(0, mask[i] || 0)) * 255)
-    const offset = i * 4
-    imageData.data[offset] = value
-    imageData.data[offset + 1] = value
-    imageData.data[offset + 2] = value
-    imageData.data[offset + 3] = 255
-  }
-  maskCtx.putImageData(imageData, 0, 0)
-
   const width = imageCanvas.width
   const height = imageCanvas.height
+
   const result = document.createElement('canvas')
   result.width = width
   result.height = height
@@ -961,43 +895,50 @@ async function CutoutWithMask(
   ctx.drawImage(imageCanvas, 0, 0)
   const resultData = ctx.getImageData(0, 0, width, height)
 
-  const scaledMask = document.createElement('canvas')
-  scaledMask.width = width
-  scaledMask.height = height
-  const scaledCtx = scaledMask.getContext('2d')
-  if (!scaledCtx) {
-    throw new Error('无法缩放蒙版')
+  /**
+   * 在 float mask 上直接双线性采样，避免 8bit canvas 量化损失
+   * @param x 原图像素 x
+   * @param y 原图像素 y
+   * @returns 采样 alpha 0~1
+   */
+  const SampleMask = (x: number, y: number): number => {
+    const fx = ((x + 0.5) / width) * side - 0.5
+    const fy = ((y + 0.5) / height) * side - 0.5
+    const x0 = Math.max(0, Math.min(side - 1, Math.floor(fx)))
+    const y0 = Math.max(0, Math.min(side - 1, Math.floor(fy)))
+    const x1 = Math.min(side - 1, x0 + 1)
+    const y1 = Math.min(side - 1, y0 + 1)
+    const tx = Math.max(0, Math.min(1, fx - x0))
+    const ty = Math.max(0, Math.min(1, fy - y0))
+    const a = mask[y0 * side + x0] || 0
+    const b = mask[y0 * side + x1] || 0
+    const c = mask[y1 * side + x0] || 0
+    const d = mask[y1 * side + x1] || 0
+    return (
+      a * (1 - tx) * (1 - ty) +
+      b * tx * (1 - ty) +
+      c * (1 - tx) * ty +
+      d * tx * ty
+    )
   }
-  // 高分辨率蒙版放大时用高质量插值，保留细线
-  scaledCtx.imageSmoothingEnabled = true
-  scaledCtx.imageSmoothingQuality = 'high'
-  scaledCtx.drawImage(maskCanvas, 0, 0, width, height)
-  const maskData = scaledCtx.getImageData(0, 0, width, height)
 
-  let low = 0.18
-  let high = 0.72
-  let gamma = 1
-  if (harden === 'strong') {
-    // 抬升中灰主体后收紧阈值，减少立体字镂空发虚
-    low = 0.22
-    high = 0.58
-    gamma = 0.55
-  } else if (harden === 'preserve') {
-    low = 0.12
-    high = 0.78
-    gamma = 0.65
-  }
-
-  for (let i = 0; i < resultData.data.length; i += 4) {
-    let rawAlpha = maskData.data[i] / 255
-    if (gamma !== 1) {
-      rawAlpha = Math.pow(rawAlpha, gamma)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let alpha = SampleMask(x, y)
+      // 只压缩两端噪声，中间区间线性保留 —— 保住发丝与抗锯齿
+      if (alpha < 0.05) {
+        alpha = 0
+      } else if (alpha > 0.95) {
+        alpha = 1
+      }
+      resultData.data[(y * width + x) * 4 + 3] = Math.round(
+        Math.min(1, Math.max(0, alpha)) * 255,
+      )
     }
-    resultData.data[i + 3] = Math.round(HardenAlphaValue(rawAlpha, low, high) * 255)
   }
   ctx.putImageData(resultData, 0, 0)
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
+  return new Promise<Blob>((resolve, reject) => {
     result.toBlob((value) => {
       if (value) {
         resolve(value)
@@ -1006,7 +947,6 @@ async function CutoutWithMask(
       }
     }, 'image/png')
   })
-  return blob
 }
 
 /**
@@ -1031,7 +971,7 @@ export async function RemoveImageBackground(
     onProgress?.({
       step: 'processing',
       progress: 12,
-      message: `已缩小至 ${resized.width}×${resized.height} 再推理`,
+      message: `已缩小至 ${resized.width}×${resized.height} 再合成`,
     })
   }
 
@@ -1061,11 +1001,9 @@ export async function RemoveImageBackground(
         { data: Float32Array | Float64Array | Int32Array | Uint8Array }
       >,
     )
-    const usePercentile =
-      modelId === 'isnet-anime' || modelId === 'isnet-general-use'
-    const normalized = NormalizeMaskValues(merged, usePercentile)
+    const probability = EnsureProbabilityMask(merged)
     const modelSide =
-      GetMattingModelSide(modelId) || Math.round(Math.sqrt(normalized.length))
+      GetMattingModelSide(modelId) || Math.round(Math.sqrt(probability.length))
 
     onProgress?.({
       step: 'postprocessing',
@@ -1073,12 +1011,7 @@ export async function RemoveImageBackground(
       message: '正在合成透明图…',
     })
 
-    const blob = await CutoutWithMask(
-      imageCanvas,
-      normalized,
-      modelSide,
-      GetHardenMode(modelId),
-    )
+    const blob = await CutoutWithMask(imageCanvas, probability, modelSide)
 
     onProgress?.({
       step: 'complete',

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import { fileURLToPath, URL } from 'node:url'
+import { CreateMattingProxyPlugin } from './scripts/MattingProxyPlugin.mjs'
 
 /**
  * Vite 多环境配置
@@ -21,6 +22,7 @@ export default defineConfig(({ mode }) => {
         entry: '/src/main.ts',
         template: 'public/index.html',
       }),
+      CreateMattingProxyPlugin(),
     ],
     resolve: {
       alias: {

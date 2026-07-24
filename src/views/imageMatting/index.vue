@@ -66,7 +66,9 @@
           </div>
           <p class="model-desc">{{ currentModelDesc }}</p>
           <p class="model-tip">
-            默认「轻量」；切换其它档位时会自动下载模型到浏览器缓存。复杂立体字海报建议先用轻量档。
+            默认「轻量」；切换其它档位会经同源代理/镜像下载。通用高清约 174MB，失败时可执行
+            <code>npm run sync-matting</code>
+            预置到本地。
           </p>
 
           <div class="actions">

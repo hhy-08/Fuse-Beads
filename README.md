@@ -230,8 +230,26 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
-### 2026-07-23（修复 ONNX protobuf 解析失败）
+### 2026-07-24（通用高清下载失败 / CORS）
 
+- **会话目的**：修复「通用高清」每次下载失败。
+- **完成任务**：
+  - 根因：浏览器直连 GitHub 无 CORS、huggingface.co 国内常不可达；本地也缺 `isnet-general-use.onnx`
+  - 镜像改为优先 `hf-mirror.com`（带 CORS）
+  - 增加同源 `/matting-proxy`（Vite 中间件 + Pages Function）服务端拉取
+  - 预置 `public/models/isnet-general-use.onnx`
+- **关键决策**：大模型在浏览器侧必须同源或 CORS 友好 CDN，不能指望 GitHub Releases。
+- **修改文件**：`ImageMatting.ts`、`vite.config.ts`、`scripts/MattingProxyPlugin.mjs`、`functions/matting-proxy.ts`、`FetchMattingModels.mjs`、`imageMatting/index.vue`、`README.md`
+
+### 2026-07-23（修正自研后处理 + 大模型镜像）
+
+- **会话目的**：按根因修复抠图发虚/镂空，并改善通用高清等大模型下载。
+- **完成任务**：
+  - 只用主输出（不再 max 融合侧输出）；概率 mask 不做 min-max/百分位拉伸
+  - float 双线性采样合成 alpha，两端温和裁剪，去掉过度 gamma/锐化
+  - 大模型镜像改为 HF（tomjackson2023 / SacredNoir 等），下载加停滞超时与无 Content-Length 进度估算
+- **关键决策**：效果差来自错误后处理；下载失败来自 ghfast 大文件限流与不可靠镜像。
+- **修改文件**：`src/utils/ImageMatting.ts`、`scripts/FetchMattingModels.mjs`、`README.md`
 - **会话目的**：修复「通用高清」等模型加载时报 `protobuf parsing failed`。
 - **完成任务**：
   - 按模型最小体积 + 文件头校验，拒绝 HTML/LFS/截断包
