@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import { fileURLToPath, URL } from 'node:url'
 import { CreateMattingProxyPlugin } from './scripts/MattingProxyPlugin.mjs'
+import { CreateStripOversizedAssetsPlugin } from './scripts/StripOversizedAssetsPlugin.mjs'
 
 /**
  * Vite 多环境配置
@@ -23,11 +24,15 @@ export default defineConfig(({ mode }) => {
         template: 'public/index.html',
       }),
       CreateMattingProxyPlugin(),
+      // Cloudflare Pages 单文件 ≤25MiB：剔除超限 onnx 等，大模型改运行时下载
+      CreateStripOversizedAssetsPlugin(),
     ],
     resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
-      },
+      alias: [
+        { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+        // rembg-web 默认依赖 onnxruntime-web（jsep≈26MB 超限），强制走经典 wasm 入口
+        { find: /^onnxruntime-web$/, replacement: 'onnxruntime-web/wasm' },
+      ],
     },
     server: {
       port: 5173,

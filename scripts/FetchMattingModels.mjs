@@ -1,11 +1,12 @@
 /**
  * 将 AI 抠图 ONNX 模型拉取到 public/models
  * 默认从 GitHub Releases 下载（安装期走服务端网络，避开浏览器访问 HuggingFace 超时）
- * ORT WASM 由 Vite ?url 从 node_modules 打包，无需再同步到 public/ort
+ * ORT WASM 由 Vite ?url 从 node_modules 打包（经典 threaded.wasm，非 jsep）
+ * 生产构建默认 --light：仅预置 u2netp（≤25MiB），大模型由浏览器按需下载（Cloudflare Pages 限制）
  *
  * 用法：
- *   node scripts/FetchMattingModels.mjs           # 全部模型
- *   node scripts/FetchMattingModels.mjs --light   # 仅 u2netp
+ *   node scripts/FetchMattingModels.mjs           # 全部模型（本地预热，勿直接用于 Pages 出包）
+ *   node scripts/FetchMattingModels.mjs --light   # 仅 u2netp（Pages / CI 推荐）
  *   node scripts/FetchMattingModels.mjs --poster  # 轻量 + 海报推荐 isnet-anime
  */
 import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs'

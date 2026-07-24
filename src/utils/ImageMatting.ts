@@ -1,11 +1,11 @@
 /**
  * AI 智能抠图工具模块
  * 基于 @bunnio/rembg-web + onnxruntime-web
- * 默认轻量 u2netp，可选高质量 silueta；模型同源托管，ORT 经 Vite ?url 打包避免 public 动态 import 报错
+ * 默认轻量 u2netp，可选高质量模型按需下载；ORT 使用经典 WASM（非 jsep，约 13MB）以符合 Cloudflare Pages 单文件 ≤25MiB
  */
 import type { BaseSession } from '@bunnio/rembg-web'
-import OrtWasmJsep from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm?url'
-import OrtWasmJsepMjs from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url'
+import OrtWasm from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
+import OrtWasmMjs from 'onnxruntime-web/ort-wasm-simd-threaded.mjs?url'
 import { GetBaseRoute } from '@/utils/Env'
 import type { MattingModelId, MattingModelOption } from '@/views/imageMatting/types'
 
@@ -573,14 +573,14 @@ async function EnsureRuntimeReady() {
     return
   }
 
-  const ort = await import('onnxruntime-web')
+  // 使用 wasm 专用入口（非默认 jsep），配套经典 threaded.wasm（约 13MB）
+  const ort = await import('onnxruntime-web/wasm')
   const rembg = await ImportRembg()
 
   // 经 Vite ?url 打包，避免 public/*.mjs 被当成源码动态 import 报错
-  // 当前 ort 默认走 JSEP 运行时，故映射 jsep 资源
   ort.env.wasm.wasmPaths = {
-    wasm: OrtWasmJsep,
-    mjs: OrtWasmJsepMjs,
+    wasm: OrtWasm,
+    mjs: OrtWasmMjs,
   }
   // 放入 Web Worker，减轻主线程卡顿
   ort.env.wasm.proxy = true

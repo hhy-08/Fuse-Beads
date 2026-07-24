@@ -266,6 +266,19 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（Cloudflare Pages 单文件 25MiB 限制）
+
+- **会话目的**：修复 Pages 部署校验失败：`ort-wasm-simd-threaded.jsep.wasm` 约 25.6MiB 超限。
+- **完成任务**：
+  - ORT 从默认 JSEP（~26MiB）改为经典 `onnxruntime-web/wasm` + `ort-wasm-simd-threaded.wasm`（~12.9MiB）
+  - Vite alias 强制 `@bunnio/rembg-web` 也走 wasm 入口，避免再次打进 jsep
+  - 生产 `build*` 改为 `--light` 仅预置 u2netp；新增 `build:full-models` 供本地全量预热
+  - 新增 `StripOversizedAssetsPlugin`：构建后剔除 dist 内 >25MiB 文件（本地残留大模型不会误上传）
+- **关键决策**：大模型继续运行时按需下载；Pages 出包只保留轻量资源
+- **修改文件**：
+  - 更新 `src/utils/ImageMatting.ts`、`vite.config.ts`、`package.json`、`scripts/FetchMattingModels.mjs`
+  - 新增 `scripts/StripOversizedAssetsPlugin.mjs`、更新 `README.md`
+
 ### 2026-07-24（Cloudflare Pages 构建 TS 报错修复）
 
 - **会话目的**：修复 Cloudflare Pages `npm run build` 中 `vue-tsc` 失败导致的部署中断。
