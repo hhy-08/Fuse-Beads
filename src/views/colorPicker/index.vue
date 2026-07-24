@@ -1,16 +1,6 @@
 <template>
   <div class="color-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>拾色器（色值转换）</h1>
-        <p class="subtitle">屏幕取色，HEX / RGB / HSL / 透明度互相转换，支持自定义调色</p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero title="拾色器（色值转换）" subtitle="屏幕取色，HEX / RGB / HSL / 透明度互相转换，支持自定义调色" />
 
     <main class="workspace">
       <section class="picker-layout">
@@ -277,7 +267,8 @@
  * 屏幕取色、HEX / RGB / HSL / 透明度互转、自定义调色板
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   AddColorToPalette,
   BuildColorFromHex,
@@ -302,9 +293,11 @@ const DEFAULT_COLOR = BuildColorFromHex('#31486F') as ColorValue
 
 export default defineComponent({
   name: 'ColorPickerView',
+  components: {
+    ToolPageHero,
+  },
   data() {
     return {
-      appBrand: APPBRAND,
       color: {
         ...DEFAULT_COLOR,
         rgb: { ...DEFAULT_COLOR.rgb },
@@ -573,68 +566,6 @@ export default defineComponent({
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 42rem;
-  line-height: 1.5;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
 }
 
 .workspace {
@@ -985,26 +916,5 @@ export default defineComponent({
   font-size: 0.9rem;
 }
 
-@media (max-width: 900px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .picker-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .rgb-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .rgba-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .rgb-grid .ghost.mini {
-    grid-column: 1 / -1;
-  }
-}
+@media (max-width: 900px) {.picker-layout { grid-template-columns: 1fr; } .rgb-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .rgba-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rgb-grid .ghost.mini { grid-column: 1 / -1; }}
 </style>

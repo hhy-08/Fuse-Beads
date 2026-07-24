@@ -1,19 +1,10 @@
 <template>
   <div class="pixel-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>像素画布</h1>
-        <p class="subtitle">
-          自由手绘像素画，支持橡皮擦、取色、图层与网格，可导出像素图 / 拼豆图纸并对接拼豆生成器
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/generator">拼豆工具</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero
+      title="像素画布"
+      subtitle="自由手绘像素画，支持橡皮擦、取色、图层与网格，可导出像素图 / 拼豆图纸并对接拼豆生成器"
+      :links="[{ to: '/', label: '工具列表' }, { to: '/generator', label: '拼豆工具' }, { to: '/about', label: '关于' }]"
+    />
 
     <main class="workspace">
       <aside class="panel tools-panel">
@@ -179,13 +170,14 @@
  * 手绘 / 橡皮 / 取色 / 填充 / 图层 / 网格，并对接拼豆生成器
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
 import router from '@/router'
 import {
   GetMardColorsBySeries,
   MARDSERIES,
   type MardColor,
 } from '@/utils/MardColors'
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   AddPixelLayer,
   ClearPixelLayer,
@@ -209,10 +201,12 @@ import {
 
 export default defineComponent({
   name: 'PixelEditorView',
+  components: {
+    ToolPageHero,
+  },
   data() {
     const project = CreatePixelProject(32, 32)
     return {
-      appBrand: APPBRAND,
       project,
       tool: 'pen' as PixelTool,
       toolOptions: [
@@ -629,68 +623,6 @@ export default defineComponent({
   flex-direction: column;
 }
 
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 40rem;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
-}
-
 .workspace {
   flex: 1;
   width: min(1180px, 100%);
@@ -950,18 +882,5 @@ export default defineComponent({
   background: #fff;
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .tools-panel {
-    max-height: none;
-  }
-
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
+@media (max-width: 900px) {.workspace { grid-template-columns: 1fr; } .tools-panel { max-height: none; }}
 </style>

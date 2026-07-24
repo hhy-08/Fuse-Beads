@@ -240,6 +240,22 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-24（抽取 ToolPageHero 公用组件）
+
+- **会话目的**：将各工具页重复的顶部 hero 抽成公用组件，统一品牌区与导航。
+- **完成任务**：
+  - 新增 `ToolPageHero`（`title` / `subtitle` / 可选 `links`，内置 `APPBRAND`）
+  - 23 个含 `class="hero"` 的工具页改为引用该组件，并清理重复 hero 样式与 `appBrand`
+  - 保留各页原有自定义导航（如世界时钟、像素缩放、图纸计算等）
+  - `about` 页结构不同，未纳入
+  - 本地 `vue-tsc -b` 通过
+- **关键决策**：
+  - 默认导航为「工具列表 + 关于」；特殊页通过 `links` prop 显式传入
+  - 样式以拾色器页 hero 为准，集中维护
+- **修改文件**：
+  - 新增 `src/components/ToolPageHero.vue`
+  - 更新 `src/views/**/index.vue`（除 about）、`README.md`
+
 ### 2026-07-24（Cloudflare Pages 构建 TS 报错修复）
 
 - **会话目的**：修复 Cloudflare Pages `npm run build` 中 `vue-tsc` 失败导致的部署中断。

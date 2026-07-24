@@ -1,18 +1,6 @@
 <template>
   <div class="json-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>JSON 格式化</h1>
-        <p class="subtitle">
-          校验、美化、压缩 JSON；支持 stringify 转义字符串与树形展开；解析失败可用 AI 修复
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero title="JSON 格式化" subtitle="校验、美化、压缩 JSON；支持 stringify 转义字符串与树形展开；解析失败可用 AI 修复" />
 
     <main class="workspace">
       <section class="toolbar">
@@ -226,7 +214,7 @@
  * 支持普通 JSON 与 stringify 转义字符串；解析结果支持可折叠树形视图
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
 import {
   CollectExpandablePaths,
   CountJsonTextStats,
@@ -241,17 +229,18 @@ import {
   type JsonIndentSize,
 } from '@/utils/JsonFormatter'
 import JsonTreeNode from './components/JsonTreeNode.vue'
+import ToolPageHero from '@/components/ToolPageHero.vue'
 
 type ResultMode = 'tree' | 'text'
 
 export default defineComponent({
   name: 'JsonFormatterView',
   components: {
+    ToolPageHero,
     JsonTreeNode,
   },
   data() {
     return {
-      appBrand: APPBRAND,
       inputText: '',
       outputText: '',
       parsedData: null as unknown,
@@ -644,69 +633,6 @@ export default defineComponent({
     linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
 }
 
-.hero {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 36px 6vw 28px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 42rem;
-  line-height: 1.5;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
-}
-
 .workspace {
   flex: 1;
   min-height: 0;
@@ -1023,10 +949,7 @@ export default defineComponent({
     overflow: auto;
   }
 
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  
 
   .workspace {
     overflow: visible;

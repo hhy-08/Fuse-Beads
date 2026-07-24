@@ -1,19 +1,10 @@
 <template>
   <div class="calc-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>图纸尺寸计算</h1>
-        <p class="subtitle">
-          输入图案像素宽高，自动估算拼豆板规格、豆子总数；上传图纸可统计各色用量
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/generator">拼豆工具</router-link>
-        <router-link to="/palette-simulator">配色模拟</router-link>
-      </nav>
-    </header>
+    <ToolPageHero
+      title="图纸尺寸计算"
+      subtitle="输入图案像素宽高，自动估算拼豆板规格、豆子总数；上传图纸可统计各色用量"
+      :links="[{ to: '/', label: '工具列表' }, { to: '/generator', label: '拼豆工具' }, { to: '/palette-simulator', label: '配色模拟' }]"
+    />
 
     <main class="workspace">
       <section class="panel input-panel">
@@ -242,7 +233,8 @@
  * 估算板材规格、豆子总数，可选图片色号用量统计
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   AnalyzeImageColorUsage,
   CalculatePatternSize,
@@ -256,10 +248,12 @@ import {
 
 export default defineComponent({
   name: 'BoardCalculatorView',
+  components: {
+    ToolPageHero,
+  },
   data() {
     const initial = CalculatePatternSize(48, 48, 0)
     return {
-      appBrand: APPBRAND,
       patternWidth: 48,
       patternHeight: 48,
       strokeWidth: 0,
@@ -453,68 +447,6 @@ export default defineComponent({
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 40rem;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
 }
 
 .workspace {
@@ -885,22 +817,5 @@ tr.best {
   line-height: 1.5;
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .usage-item {
-    grid-template-columns: 28px 1fr auto;
-  }
-
-  .usage-bar-wrap {
-    grid-column: 1 / -1;
-  }
-}
+@media (max-width: 900px) {.workspace { grid-template-columns: 1fr; } .usage-item { grid-template-columns: 28px 1fr auto; } .usage-bar-wrap { grid-column: 1 / -1; }}
 </style>

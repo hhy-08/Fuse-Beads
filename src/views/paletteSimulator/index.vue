@@ -1,19 +1,10 @@
 <template>
   <div class="palette-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>配色模拟</h1>
-        <p class="subtitle">
-          输入多个 MARD 色号，实时预览色块搭配；支持保存配色方案到本地
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/generator">拼豆工具</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero
+      title="配色模拟"
+      subtitle="输入多个 MARD 色号，实时预览色块搭配；支持保存配色方案到本地"
+      :links="[{ to: '/', label: '工具列表' }, { to: '/generator', label: '拼豆工具' }, { to: '/about', label: '关于' }]"
+    />
 
     <main class="workspace">
       <aside class="panel side-panel">
@@ -222,13 +213,14 @@
  * 多色号实时预览与本地方案保存
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
 import {
   FindMardColorByCode,
   GetMardColorsBySeries,
   MARDSERIES,
   type MardColor,
 } from '@/utils/MardColors'
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   DeletePaletteScheme,
   FormatSchemeTime,
@@ -241,9 +233,11 @@ import {
 
 export default defineComponent({
   name: 'PaletteSimulatorView',
+  components: {
+    ToolPageHero,
+  },
   data() {
     return {
-      appBrand: APPBRAND,
       seriesList: MARDSERIES as readonly string[],
       paletteSeries: '全部',
       codeInput: '',
@@ -432,68 +426,6 @@ export default defineComponent({
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 38rem;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
 }
 
 .workspace {
@@ -905,22 +837,5 @@ export default defineComponent({
   color: #8a96aa;
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .side-panel {
-    max-height: none;
-  }
-
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .preview-toolbar {
-    flex-direction: column;
-  }
-}
+@media (max-width: 900px) {.workspace { grid-template-columns: 1fr; } .side-panel { max-height: none; } .preview-toolbar { flex-direction: column; }}
 </style>

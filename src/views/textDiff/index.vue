@@ -1,18 +1,6 @@
 <template>
   <div class="diff-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>文本对比</h1>
-        <p class="subtitle">
-          两段文字差异高亮，适合文案校对与代码对比；支持粘贴或上传 txt / json / vue 等文本文件
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero title="文本对比" subtitle="两段文字差异高亮，适合文案校对与代码对比；支持粘贴或上传 txt / json / vue 等文本文件" />
 
     <main class="workspace">
       <section class="editors">
@@ -231,7 +219,8 @@
  * 支持粘贴与多类型文本文件对比，行级 + 字符级高亮
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   DiffTexts,
   IsSupportedTextDiffFile,
@@ -259,9 +248,11 @@ type UnifiedRow = {
 
 export default defineComponent({
   name: 'TextDiffView',
+  components: {
+    ToolPageHero,
+  },
   data() {
     return {
-      appBrand: APPBRAND,
       leftText: '',
       rightText: '',
       leftFileName: '',
@@ -636,67 +627,6 @@ export default defineComponent({
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 42rem;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
 }
 
 .workspace {
@@ -1110,15 +1040,5 @@ button.stat em {
   opacity: 0.35;
 }
 
-@media (max-width: 900px) {
-  .editors,
-  .diff-side {
-    grid-template-columns: 1fr;
-  }
-
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
+@media (max-width: 900px) {.editors, .diff-side { grid-template-columns: 1fr; }}
 </style>

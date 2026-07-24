@@ -1,17 +1,10 @@
 <template>
   <div class="base64-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>图片 ↔ Base64</h1>
-        <p class="subtitle">本地互转图片与 Base64 / Data URL，适合嵌入代码或接口调试</p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/image-compress">图片压缩</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero
+      title="图片 ↔ Base64"
+      subtitle="本地互转图片与 Base64 / Data URL，适合嵌入代码或接口调试"
+      :links="[{ to: '/', label: '工具列表' }, { to: '/image-compress', label: '图片压缩' }, { to: '/about', label: '关于' }]"
+    />
 
     <main class="workspace">
       <section class="notice-card" role="note">
@@ -168,7 +161,8 @@
  * 含超大图提示与体积硬限制，避免超长字符串卡顿
  */
 import { defineComponent } from 'vue'
-import { APPBRAND } from '@/utils/Brand'
+
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   CheckBase64TextLimit,
   CheckImageBase64Limit,
@@ -189,9 +183,11 @@ type ConvertMode = 'toBase64' | 'toImage'
 
 export default defineComponent({
   name: 'ImageBase64View',
+  components: {
+    ToolPageHero,
+  },
   data() {
     return {
-      appBrand: APPBRAND,
       notices: GetImageBase64Notices(),
       mode: 'toBase64' as ConvertMode,
       isDragging: false,
@@ -543,69 +539,6 @@ export default defineComponent({
   flex-direction: column;
 }
 
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 16% 18%, rgba(92, 196, 255, 0.38), transparent 42%),
-    radial-gradient(circle at 84% 12%, rgba(255, 176, 92, 0.32), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #3f6d8a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 40rem;
-  line-height: 1.5;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-  flex-wrap: wrap;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
-}
-
 .workspace {
   flex: 1;
   width: min(980px, 100%);
@@ -886,10 +819,7 @@ export default defineComponent({
 }
 
 @media (max-width: 760px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  
 
   .result-grid {
     grid-template-columns: 1fr;

@@ -1,18 +1,6 @@
 <template>
   <div class="crop-page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>图片裁剪</h1>
-        <p class="subtitle">
-          固定比例、圆形与圆角裁切，适合头像与素材预处理，全部本地完成
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero title="图片裁剪" subtitle="固定比例、圆形与圆角裁切，适合头像与素材预处理，全部本地完成" />
 
     <main class="workspace">
       <input
@@ -186,7 +174,7 @@
  */
 import { defineComponent } from 'vue'
 import router from '@/router'
-import { APPBRAND } from '@/utils/Brand'
+
 import {
   CreateDefaultCropRect,
   DownloadDataUrl,
@@ -199,6 +187,7 @@ import {
   type CropShape,
 } from '@/utils/ImageCrop'
 import CropCanvas from './components/CropCanvas.vue'
+import ToolPageHero from '@/components/ToolPageHero.vue'
 
 /** 页面形态模式 */
 type CropMode = 'free' | 'ratio' | 'circle' | 'rounded'
@@ -217,11 +206,11 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024
 export default defineComponent({
   name: 'ImageCropView',
   components: {
+    ToolPageHero,
     CropCanvas,
   },
   data() {
     return {
-      appBrand: APPBRAND,
       isDragging: false,
       isBusy: false,
       statusText: '',
@@ -608,66 +597,6 @@ export default defineComponent({
   flex-direction: column;
 }
 
-.hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-  overflow: hidden;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-}
-
-.hero-nav {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
-}
-
 .workspace {
   flex: 1;
   width: min(1100px, 100%);
@@ -897,10 +826,7 @@ export default defineComponent({
 }
 
 @media (max-width: 800px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  
 
   .custom-ratio {
     margin-left: 0;

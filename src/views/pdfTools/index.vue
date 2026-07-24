@@ -1,19 +1,6 @@
 <template>
   <div class="pdf-home">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="brand">{{ appBrand }}</p>
-        <h1>PDF 工具站</h1>
-        <p class="subtitle">
-          合并、拆分、旋转、水印与图片转 PDF 已上云；Word↔PDF / 加密需后续启用
-          Containers
-        </p>
-      </div>
-      <nav class="hero-nav">
-        <router-link to="/">工具列表</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
-    </header>
+    <ToolPageHero title="PDF 工具站" subtitle="合并、拆分、旋转、水印与图片转 PDF 已上云；Word↔PDF / 加密需后续启用 Containers" />
 
     <main class="workspace">
       <p class="api-tip" :class="{ ok: apiOnline, warn: !apiOnline && hasApi }">
@@ -68,26 +55,26 @@
  * PDF 工具站首页 —— 卡片网格入口
  */
 import { defineComponent } from 'vue'
-import { GetAppTitle } from '@/utils/Env'
 import {
   FilterPdfTools,
   GetPdfToolCategories,
   type PdfToolCategory,
   type PdfToolItem,
 } from '@/utils/pdfTools/PdfToolList'
+import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
   HasPdfApi,
   PingPdfApi,
   ResolvePdfApiRoot,
 } from '@/utils/pdfTools/PdfApi'
 
-const APPBRAND = GetAppTitle()
-
 export default defineComponent({
   name: 'PdfToolsHome',
+  components: {
+    ToolPageHero,
+  },
   data() {
     return {
-      appBrand: APPBRAND,
       categories: GetPdfToolCategories(),
       activeCategory: 'all' as PdfToolCategory | 'all',
       hasApi: HasPdfApi(),
@@ -133,62 +120,6 @@ export default defineComponent({
     radial-gradient(ellipse at 10% 0%, rgba(255, 186, 92, 0.18), transparent 42%),
     radial-gradient(ellipse at 90% 8%, rgba(72, 140, 255, 0.16), transparent 40%),
     linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
-}
-
-.hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 48px 6vw 36px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
-    radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #1d2a44 0%, #31486f 48%, #4d6d9a 100%);
-}
-
-.hero-copy {
-  color: #fff8ef;
-}
-
-.brand {
-  margin: 0 0 8px;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 1;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  opacity: 0.88;
-  max-width: 42rem;
-  line-height: 1.55;
-}
-
-.hero-nav {
-  display: flex;
-  gap: 12px;
-  align-self: flex-start;
-}
-
-.hero-nav a {
-  color: #fff8ef;
-  text-decoration: none;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 248, 239, 0.35);
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.hero-nav a:hover,
-.hero-nav a.router-link-active {
-  background: rgba(255, 248, 239, 0.16);
-  border-color: rgba(255, 248, 239, 0.7);
 }
 
 .workspace {
@@ -310,9 +241,6 @@ export default defineComponent({
 }
 
 @media (max-width: 640px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  
 }
 </style>
