@@ -21,6 +21,7 @@
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
 - JSON 格式化：校验 / 美化 / 压缩；支持 stringify 转义字符串；树形展开收起；解析失败可「AI 修复」（本地智能纠错）
+- 拾色器：屏幕取色，HEX / RGB / HSL / 透明度互转，自定义调色板本地保存
 - AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
@@ -69,6 +70,7 @@ npm run dev
 | `/watermark` | 图片水印工具 |
 | `/image-converter` | 图片格式转换 |
 | `/unit-converter` | 单位转换 |
+| `/color-picker` | 拾色器（色值转换） |
 | `/file-converter` | 文件转换（纯前端） |
 | `/pdf-tools` | PDF 工具站（卡片入口） |
 | `/pdf-tools/:toolId` | 单个 PDF 工具工作区 |
@@ -231,6 +233,29 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（拾色器取消工作区全屏）
+
+- **会话目的**：拾色器工作区改为普通页面布局，不再铺满视口。
+- **修改文件**：`src/views/colorPicker/index.vue`、`README.md`
+
+### 2026-07-24（拾色器透明度）
+
+- **会话目的**：拾色器支持透明度设置与展示。
+- **完成任务**：支持 Alpha 0~100%、`#RRGGBBAA` / `rgba` / `hsla`；预览与调色板使用棋盘格显示半透明。
+- **修改文件**：`src/utils/ColorPicker.ts`、`src/views/colorPicker/index.vue`、`src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-24（拾色器色值转换）
+
+- **会话目的**：新增多功能拾色器工具。
+- **完成任务**：
+  - 实现 HEX / RGB / HSL 互转、原生调色、HSL 滑块
+  - 支持 EyeDropper 屏幕取色；自定义调色板本地保存（最多 24 色）
+  - 注册路由 `/color-picker`，加入「趣味生活」分类
+- **关键决策**：取色依赖浏览器 EyeDropper；不支持时仍可手动输入与调色板选色。
+- **修改文件**：
+  - 新增 `src/utils/ColorPicker.ts`、`src/views/colorPicker/index.vue`、`src/router/colorPicker/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-24（工具首页简介文案）
 
