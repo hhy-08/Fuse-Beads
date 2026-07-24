@@ -266,6 +266,23 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（Markdown 卡片工具栏布局）
+
+- **会话目的**：修正「Markdown 输入」标题与操作按钮挤在同一行导致换行难看的问题。
+- **完成任务**：标题与文件名单独一行，下方操作按钮等分横排且不换行。
+- **关键决策**：`pane-head` 改为纵向布局，按钮 `flex: 1` 均分宽度。
+- **修改文件**：更新 `src/views/markdownCard/index.vue`、`README.md`
+
+### 2026-07-24（Markdown 卡片支持上传 MD）
+
+- **会话目的**：完善 Markdown 卡片页，支持上传本地 Markdown 文件。
+- **完成任务**：
+  - 增加「上传 MD」按钮，接受 `.md` / `.markdown` / `.mdown` / `.mkd` / `.txt`
+  - 支持拖放到编辑区；显示已加载文件名；限制 2MB；去除 UTF-8 BOM
+- **关键决策**：校验与读取逻辑放在 `MarkdownCard.ts`，与粘贴 / 示例共用 `ApplyMarkdownText`
+- **修改文件**：
+  - 更新 `src/utils/MarkdownCard.ts`、`src/views/markdownCard/index.vue`、`README.md`
+
 ### 2026-07-24（Markdown 卡片生成）
 
 - **会话目的**：新增「Markdown 卡片生成」工具，粘贴 Markdown 渲染精美卡片并导出图片，便于社交分享。

@@ -8,8 +8,20 @@
     <main class="workspace">
       <section class="panel editor-panel">
         <div class="pane-head">
-          <h2>Markdown 输入</h2>
+          <div class="pane-title">
+            <h2>Markdown 输入</h2>
+            <span v-if="fileName" class="file-tag" :title="fileName">{{ fileName }}</span>
+          </div>
           <div class="pane-actions">
+            <label class="ghost mini file-btn">
+              上传 MD
+              <input
+                type="file"
+                :accept="fileAccept"
+                hidden
+                @change="HandleLoadFile"
+              />
+            </label>
             <button type="button" class="ghost mini" @click="HandlePaste">粘贴</button>
             <button type="button" class="ghost mini" @click="HandleLoadSample">示例</button>
             <button type="button" class="ghost mini" @click="HandleClear">清空</button>
@@ -17,10 +29,14 @@
         </div>
         <textarea
           class="editor"
+          :class="{ 'is-dragover': isDragOver }"
           :value="markdownText"
-          placeholder="粘贴 Markdown…"
+          placeholder="粘贴 Markdown，或上传 .md 文件…"
           spellcheck="false"
           @input="HandleInput"
+          @dragover.prevent="HandleDragOver"
+          @dragleave.prevent="HandleDragLeave"
+          @drop.prevent="HandleDrop"
         />
         <p class="meta">{{ lineCount }} 行 · {{ charCount }} 字符</p>
 
@@ -159,6 +175,8 @@ import {
   GetMarkdownCardFormats,
   GetMarkdownCardThemes,
   GetMarkdownCardWidths,
+  MARKDOWNCARDEXTENSIONS,
+  ReadMarkdownFileContent,
   RenderMarkdownToHtml,
   ResolveMarkdownCardFilename,
   ResolveMarkdownCardFormat,
@@ -188,6 +206,9 @@ export default defineComponent({
       statusText: '',
       hasError: false,
       isBusy: false,
+      fileName: '',
+      isDragOver: false,
+      fileAccept: MARKDOWNCARDEXTENSIONS.map((ext) => `.${ext}`).join(','),
     }
   },
   computed: {
@@ -301,12 +322,39 @@ export default defineComponent({
   },
   methods: {
     /**
+     * 写入 Markdown 文本并更新状态
+     * @param text 文本
+     * @param fileName 可选文件名
+     * @param status 状态文案
+     */
+    ApplyMarkdownText(text: string, fileName = '', status = '') {
+      this.markdownText = text
+      this.fileName = fileName
+      this.hasError = false
+      this.statusText = status
+    },
+    /**
+     * 从 File 读取并填入编辑器
+     * @param file 文件
+     */
+    async ApplyMarkdownFile(file: File) {
+      try {
+        const text = await ReadMarkdownFileContent(file)
+        this.ApplyMarkdownText(text, file.name, `已加载 ${file.name}`)
+      } catch (error) {
+        this.hasError = true
+        this.statusText =
+          error instanceof Error ? error.message : '读取文件失败'
+      }
+    },
+    /**
      * 输入变更
      * @param event 输入事件
      */
     HandleInput(event: Event) {
       const target = event.target as HTMLTextAreaElement
       this.markdownText = target.value
+      this.fileName = ''
       this.statusText = ''
       this.hasError = false
     },
@@ -316,6 +364,47 @@ export default defineComponent({
      */
     HandleTheme(themeId: MarkdownCardThemeId) {
       this.themeId = themeId
+    },
+    /**
+     * 上传 Markdown 文件
+     * @param event 文件选择事件
+     */
+    async HandleLoadFile(event: Event) {
+      const input = event.target as HTMLInputElement
+      const file = input.files?.[0]
+      input.value = ''
+      if (!file) {
+        return
+      }
+      await this.ApplyMarkdownFile(file)
+    },
+    /**
+     * 拖拽进入编辑区
+     * @param event 拖拽事件
+     */
+    HandleDragOver(event: DragEvent) {
+      if (!event.dataTransfer?.types.includes('Files')) {
+        return
+      }
+      this.isDragOver = true
+    },
+    /**
+     * 拖拽离开编辑区
+     */
+    HandleDragLeave() {
+      this.isDragOver = false
+    },
+    /**
+     * 拖放 Markdown 文件到编辑区
+     * @param event 拖放事件
+     */
+    async HandleDrop(event: DragEvent) {
+      this.isDragOver = false
+      const file = event.dataTransfer?.files?.[0]
+      if (!file) {
+        return
+      }
+      await this.ApplyMarkdownFile(file)
     },
     /**
      * 从剪贴板粘贴
@@ -328,9 +417,7 @@ export default defineComponent({
           this.statusText = '剪贴板为空'
           return
         }
-        this.markdownText = text
-        this.hasError = false
-        this.statusText = '已粘贴'
+        this.ApplyMarkdownText(text, '', '已粘贴')
       } catch {
         this.hasError = true
         this.statusText = '无法读取剪贴板，请手动粘贴'
@@ -340,15 +427,14 @@ export default defineComponent({
      * 载入示例
      */
     HandleLoadSample() {
-      this.markdownText = DEFAULTMARKDOWN
-      this.hasError = false
-      this.statusText = '已载入示例'
+      this.ApplyMarkdownText(DEFAULTMARKDOWN, '', '已载入示例')
     },
     /**
      * 清空输入
      */
     HandleClear() {
       this.markdownText = ''
+      this.fileName = ''
       this.statusText = ''
       this.hasError = false
     },
@@ -423,21 +509,53 @@ export default defineComponent({
 
 .pane-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   margin-bottom: 12px;
+}
+
+.pane-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .pane-head h2 {
   margin: 0;
   font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.file-tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: #2f5fad;
+  background: rgba(47, 95, 173, 0.1);
+  border: 1px solid rgba(47, 95, 173, 0.22);
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 
 .pane-actions {
   display: flex;
+  flex-wrap: nowrap;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.pane-actions .ghost.mini,
+.pane-actions .file-btn {
+  flex: 1 1 0;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .hint {
@@ -458,6 +576,13 @@ export default defineComponent({
   color: #1d2a44;
   background: #fff;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editor.is-dragover {
+  border-color: #3d6bb3;
+  box-shadow: inset 0 0 0 2px rgba(61, 107, 179, 0.25);
+  background: rgba(61, 107, 179, 0.04);
 }
 
 .editor:focus {
@@ -578,8 +703,15 @@ export default defineComponent({
   font-size: 0.82rem;
 }
 
-.ghost.mini:hover {
+.ghost.mini:hover,
+.file-btn:hover {
   background: rgba(29, 42, 68, 0.06);
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
 }
 
 .status {

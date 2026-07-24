@@ -205,6 +205,45 @@ export function GetMarkdownCardWidths(): MarkdownCardWidthOption[] {
   return WIDTHOPTIONS
 }
 
+/** 支持上传的 Markdown 扩展名 */
+export const MARKDOWNCARDEXTENSIONS = ['md', 'markdown', 'mdown', 'mkd', 'txt'] as const
+
+/** 上传文件大小上限（字节） */
+export const MARKDOWNCARDMAXBYTES = 2 * 1024 * 1024
+
+/**
+ * 判断是否为可上传的 Markdown / 文本文件
+ * @param file 文件
+ * @returns 是否支持
+ */
+export function IsSupportedMarkdownFile(file: File): boolean {
+  const name = file.name.toLowerCase()
+  const dot = name.lastIndexOf('.')
+  if (dot < 0) {
+    return false
+  }
+  const ext = name.slice(dot + 1)
+  return (MARKDOWNCARDEXTENSIONS as readonly string[]).includes(ext)
+}
+
+/**
+ * 读取 Markdown 文件文本（去除 UTF-8 BOM）
+ * @param file 文件
+ * @returns 文本内容
+ */
+export async function ReadMarkdownFileContent(file: File): Promise<string> {
+  if (file.size > MARKDOWNCARDMAXBYTES) {
+    throw new Error(
+      `文件过大（>${(MARKDOWNCARDMAXBYTES / 1024 / 1024).toFixed(0)}MB），请拆分后上传`,
+    )
+  }
+  if (!IsSupportedMarkdownFile(file)) {
+    throw new Error('请上传 .md / .markdown / .txt 文件')
+  }
+  const text = await file.text()
+  return text.replace(/^\uFEFF/, '')
+}
+
 /**
  * 将 Markdown 转为消毒后的 HTML
  * @param source Markdown 原文
