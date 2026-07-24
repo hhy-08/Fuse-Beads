@@ -266,6 +266,13 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（Markdown 卡片拖拽上传强化）
+
+- **会话目的**：强化拖拽上传体验，使投放区更明显。
+- **完成任务**：编辑区外包 `drop-zone`；拖入显示遮罩提示；用 dragDepth 避免闪烁；文案提示支持拖拽。
+- **关键决策**：整块输入区作为投放目标，比仅绑 textarea 更稳、更易发现。
+- **修改文件**：更新 `src/views/markdownCard/index.vue`、`README.md`
+
 ### 2026-07-24（Markdown 卡片工具栏布局）
 
 - **会话目的**：修正「Markdown 输入」标题与操作按钮挤在同一行导致换行难看的问题。

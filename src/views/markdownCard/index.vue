@@ -27,18 +27,29 @@
             <button type="button" class="ghost mini" @click="HandleClear">清空</button>
           </div>
         </div>
-        <textarea
-          class="editor"
+        <div
+          class="drop-zone"
           :class="{ 'is-dragover': isDragOver }"
-          :value="markdownText"
-          placeholder="粘贴 Markdown，或上传 .md 文件…"
-          spellcheck="false"
-          @input="HandleInput"
+          @dragenter.prevent="HandleDragEnter"
           @dragover.prevent="HandleDragOver"
           @dragleave.prevent="HandleDragLeave"
           @drop.prevent="HandleDrop"
-        />
-        <p class="meta">{{ lineCount }} 行 · {{ charCount }} 字符</p>
+        >
+          <textarea
+            class="editor"
+            :value="markdownText"
+            placeholder="粘贴 Markdown，或将 .md 文件拖到此处…"
+            spellcheck="false"
+            @input="HandleInput"
+          />
+          <div v-if="isDragOver" class="drop-overlay" aria-hidden="true">
+            <span>松开以上传 Markdown 文件</span>
+          </div>
+        </div>
+        <p class="meta">
+          {{ lineCount }} 行 · {{ charCount }} 字符
+          <span class="meta-hint">支持点击上传或拖拽 .md / .txt</span>
+        </p>
 
         <div class="controls">
           <label class="field">
@@ -208,6 +219,7 @@ export default defineComponent({
       isBusy: false,
       fileName: '',
       isDragOver: false,
+      dragDepth: 0,
       fileAccept: MARKDOWNCARDEXTENSIONS.map((ext) => `.${ext}`).join(','),
     }
   },
@@ -379,26 +391,52 @@ export default defineComponent({
       await this.ApplyMarkdownFile(file)
     },
     /**
-     * 拖拽进入编辑区
+     * 拖拽进入投放区
+     * @param event 拖拽事件
+     */
+    HandleDragEnter(event: DragEvent) {
+      if (!this.HasDragFiles(event)) {
+        return
+      }
+      this.dragDepth += 1
+      this.isDragOver = true
+    },
+    /**
+     * 拖拽在投放区上方移动（需 preventDefault 才能 drop）
      * @param event 拖拽事件
      */
     HandleDragOver(event: DragEvent) {
-      if (!event.dataTransfer?.types.includes('Files')) {
+      if (!this.HasDragFiles(event)) {
         return
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy'
       }
       this.isDragOver = true
     },
     /**
-     * 拖拽离开编辑区
+     * 拖拽离开投放区（用深度计数避免子元素闪烁）
      */
     HandleDragLeave() {
-      this.isDragOver = false
+      this.dragDepth = Math.max(0, this.dragDepth - 1)
+      if (this.dragDepth === 0) {
+        this.isDragOver = false
+      }
     },
     /**
-     * 拖放 Markdown 文件到编辑区
+     * 判断拖拽是否携带文件
+     * @param event 拖拽事件
+     * @returns 是否有文件
+     */
+    HasDragFiles(event: DragEvent): boolean {
+      return Boolean(event.dataTransfer?.types?.includes('Files'))
+    },
+    /**
+     * 拖放 Markdown 文件到投放区
      * @param event 拖放事件
      */
     async HandleDrop(event: DragEvent) {
+      this.dragDepth = 0
       this.isDragOver = false
       const file = event.dataTransfer?.files?.[0]
       if (!file) {
@@ -563,6 +601,32 @@ export default defineComponent({
   color: #5a6a84;
 }
 
+.drop-zone {
+  position: relative;
+  border-radius: 12px;
+}
+
+.drop-zone.is-dragover .editor {
+  border-color: #3d6bb3;
+  box-shadow: inset 0 0 0 2px rgba(61, 107, 179, 0.25);
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(61, 107, 179, 0.14);
+  border: 2px dashed #3d6bb3;
+  color: #1d2a44;
+  font-size: 0.95rem;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .editor {
   width: 100%;
   min-height: 280px;
@@ -579,12 +643,6 @@ export default defineComponent({
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.editor.is-dragover {
-  border-color: #3d6bb3;
-  box-shadow: inset 0 0 0 2px rgba(61, 107, 179, 0.25);
-  background: rgba(61, 107, 179, 0.04);
-}
-
 .editor:focus {
   outline: 2px solid rgba(61, 107, 179, 0.35);
   outline-offset: 1px;
@@ -594,6 +652,14 @@ export default defineComponent({
   margin: 8px 0 0;
   font-size: 0.8rem;
   color: #5a6a84;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.meta-hint {
+  opacity: 0.85;
 }
 
 .controls {
