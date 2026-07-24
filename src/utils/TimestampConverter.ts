@@ -21,6 +21,29 @@ export type TimezoneGroup = {
   options: TimezoneOption[]
 }
 
+/** 单次转换结果 */
+export type TimestampConvertItem = {
+  input: string
+  ok: boolean
+  message: string
+  timestampMs: number | null
+  timestampSec: number | null
+  datetimeText: string
+  timezone: string
+  unit: TimestampUnit
+}
+
+/** 转换历史记录 */
+export type TimestampHistoryRecord = {
+  id: string
+  direction: 'ts-to-time' | 'time-to-ts'
+  input: string
+  output: string
+  timezoneLabel: string
+  unitLabel: string
+  createdAt: string
+}
+
 /**
  * 获取常用时区列表（含北京时间与非洲多国）
  * @returns 时区选项

@@ -397,9 +397,9 @@ export async function PickScreenColor(): Promise<string | null> {
     return null
   }
   try {
-    // EyeDropper 尚未进入全部 TS DOM 类型
+    // EyeDropper 尚未进入全部 TS DOM 类型，经 unknown 断言避免 TS2352
     const EyeDropperCtor = (
-      window as Window & {
+      window as unknown as {
         EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> }
       }
     ).EyeDropper

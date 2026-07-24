@@ -240,6 +240,19 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 
 ## 会话总结
 
+### 2026-07-24（Cloudflare Pages 构建 TS 报错修复）
+
+- **会话目的**：修复 Cloudflare Pages `npm run build` 中 `vue-tsc` 失败导致的部署中断。
+- **完成任务**：
+  - 修复 `ColorPicker` 中 `EyeDropper` 类型断言（经 `unknown` 中转，消除 TS2352）
+  - 补全并导出 `TimestampConvertItem`、`TimestampHistoryRecord`，消除时间戳工具相关 TS2304 / TS2305 / TS7006
+  - 本地 `vue-tsc -b` 通过
+- **关键决策**：
+  - EyeDropper 非标准 DOM 类型用 `as unknown as`，避免直接交叉断言与 `Window` 不重叠
+  - 转换结果 / 历史记录类型与页面用法对齐（`ts-to-time` | `time-to-ts`）
+- **修改文件**：
+  - 更新 `src/utils/ColorPicker.ts`、`src/utils/TimestampConverter.ts`、`README.md`
+
 ### 2026-07-24（图片 ↔ Base64 互转）
 
 - **会话目的**：新增图片与 Base64 / Data URL 本地互转工具，并对超大图做提示与限制。
