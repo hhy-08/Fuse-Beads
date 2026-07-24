@@ -68,7 +68,7 @@ export function GetToolList(): ToolItem[] {
     {
       id: 'beads',
       name: '拼豆工具',
-      description: '文字或图片一键生成可打印的拼豆像素图纸，支持 MARD 色卡与 PNG 导出。',
+      description: '文字或图片一键生成可打印的拼豆像素图纸，支持 MARD 色卡、PNG 导出与加水印。',
       path: '/generator',
       available: true,
       badge: '可用',
@@ -77,7 +77,7 @@ export function GetToolList(): ToolItem[] {
     {
       id: 'pixel',
       name: '像素画布',
-      description: '自由手绘像素画，支持橡皮、取色、图层、网格，可导出像素图 / 拼豆图纸并对接拼豆生成器。',
+      description: '自由手绘像素画，支持橡皮、取色、图层、网格，可导出像素图 / 拼豆图纸、加水印并对接拼豆生成器。',
       path: '/pixel-editor',
       available: true,
       badge: '可用',

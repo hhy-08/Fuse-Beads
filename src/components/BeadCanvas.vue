@@ -106,7 +106,7 @@ import {
   ConvertImageToPixels,
   LoadImageFromDataUrl,
 } from '../utils/ImageToPixels'
-import { DrawBeadPattern, ExportCanvasAsPng } from '../utils/DrawBeadPattern'
+import { DrawBeadPattern, ExportCanvasAsPng, GetCanvasPngDataUrl } from '../utils/DrawBeadPattern'
 import { EnsureFontLoaded, FindFontOptionById } from '../utils/FontOptions'
 import {
   BuildBeadPatternColorUsage,
@@ -439,6 +439,18 @@ export default defineComponent({
       }
     },
     /**
+     * 解析导出文件名
+     * @returns 安全文件名
+     */
+    ResolveExportFileName(): string {
+      const baseName =
+        this.sourceMode === 'image'
+          ? 'image-bead-pattern'
+          : this.text.trim() || 'bead-pattern'
+      const safeName = baseName.replace(/\s+/g, '-')
+      return `${safeName}-拼豆图纸.png`
+    },
+    /**
      * 导出当前 Canvas 为 PNG 图纸文件（按实际格子分辨率导出）
      */
     ExportImage() {
@@ -446,13 +458,21 @@ export default defineComponent({
       if (!canvas || !this.patternGrid.width) {
         return
       }
-
-      const baseName =
-        this.sourceMode === 'image'
-          ? 'image-bead-pattern'
-          : this.text.trim() || 'bead-pattern'
-      const safeName = baseName.replace(/\s+/g, '-')
-      ExportCanvasAsPng(canvas, `${safeName}-拼豆图纸.png`)
+      ExportCanvasAsPng(canvas, this.ResolveExportFileName())
+    },
+    /**
+     * 获取当前图纸 PNG dataURL（供加水印交接）
+     * @returns dataURL 与文件名；无图纸时返回 null
+     */
+    GetExportDataUrl(): { dataUrl: string; fileName: string } | null {
+      const canvas = this.$refs.canvas as HTMLCanvasElement | undefined
+      if (!canvas || !this.patternGrid.width) {
+        return null
+      }
+      return {
+        dataUrl: GetCanvasPngDataUrl(canvas),
+        fileName: this.ResolveExportFileName(),
+      }
     },
   },
 })

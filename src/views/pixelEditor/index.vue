@@ -133,6 +133,7 @@
           <div class="action-stack">
             <button type="button" class="ghost" @click="ExportPixelImage">导出像素图 PNG</button>
             <button type="button" class="ghost" @click="ExportBeadImage">导出拼豆图纸 PNG</button>
+            <button type="button" class="ghost" @click="SendBeadToWatermark">拼豆图纸加水印</button>
             <button type="button" class="primary" @click="SendToGenerator">发送到拼豆生成器</button>
           </div>
           <p v-if="statusText" class="status" :class="{ error: hasError }">{{ statusText }}</p>
@@ -185,6 +186,7 @@ import {
   CountFilledPixels,
   CreatePixelProject,
   DrawLayerLine,
+  BuildProjectBeadDataUrl,
   ExportProjectBeadPng,
   ExportProjectPixelPng,
   FillLayerRegion,
@@ -198,6 +200,7 @@ import {
   SetLayerPixel,
   type PixelTool,
 } from '@/utils/PixelCanvas'
+import { SetWatermarkHandoff } from '@/utils/WatermarkHandoff'
 
 export default defineComponent({
   name: 'PixelEditorView',
@@ -578,6 +581,31 @@ export default defineComponent({
       } catch (error) {
         this.SetStatus(
           error instanceof Error ? error.message : '导出失败',
+          true,
+        )
+      }
+    },
+    /**
+     * 将拼豆图纸送入加水印工具
+     */
+    async SendBeadToWatermark() {
+      try {
+        const payload = BuildProjectBeadDataUrl(this.project, {
+          beadSize: 40,
+          backgroundColor: '#f7f4ef',
+          showGrid: true,
+          showColorCode: true,
+          fileName: `pixel-拼豆图纸-${ResolvePixelExportStamp()}.png`,
+        })
+        SetWatermarkHandoff(payload)
+        this.SetStatus('已送入加水印工具')
+        await router.push({
+          path: '/watermark',
+          query: { from: 'pixel-editor' },
+        })
+      } catch (error) {
+        this.SetStatus(
+          error instanceof Error ? error.message : '送入加水印失败',
           true,
         )
       }

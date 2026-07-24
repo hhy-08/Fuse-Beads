@@ -3,7 +3,7 @@
  * 图层数据、绘制操作、扁平化网格与导出
  */
 
-import { DrawBeadPattern, ExportCanvasAsPng } from '@/utils/DrawBeadPattern'
+import { DrawBeadPattern, ExportCanvasAsPng, GetCanvasPngDataUrl } from '@/utils/DrawBeadPattern'
 import {
   BuildColoredPattern,
   CountPatternBeads,
@@ -417,6 +417,23 @@ export function ExportProjectBeadPng(
   project: PixelProject,
   options: PixelBeadExportOptions,
 ) {
+  const { dataUrl, fileName } = BuildProjectBeadDataUrl(project, options)
+  const link = document.createElement('a')
+  link.download = fileName
+  link.href = dataUrl
+  link.click()
+}
+
+/**
+ * 将工程渲染为拼豆图纸 dataURL（供加水印等交接）
+ * @param project 工程
+ * @param options 图纸配置
+ * @returns dataURL 与文件名
+ */
+export function BuildProjectBeadDataUrl(
+  project: PixelProject,
+  options: PixelBeadExportOptions,
+): { dataUrl: string; fileName: string } {
   const grid = FlattenProjectToGrid(project)
   const pattern = BuildColoredPattern(grid)
   const counts = CountPatternBeads(pattern)
@@ -430,7 +447,10 @@ export function ExportProjectBeadPng(
     showGrid: options.showGrid,
     showColorCode: options.showColorCode,
   })
-  ExportCanvasAsPng(canvas, options.fileName || 'pixel-拼豆图纸.png')
+  return {
+    dataUrl: GetCanvasPngDataUrl(canvas),
+    fileName: options.fileName || 'pixel-拼豆图纸.png',
+  }
 }
 
 /**

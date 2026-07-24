@@ -418,9 +418,14 @@
       </label>
     </section>
 
-    <button class="export-btn" type="button" @click="EmitExport">
-      导出 PNG 图纸
-    </button>
+    <div class="export-actions">
+      <button class="export-btn" type="button" @click="EmitExport">
+        导出 PNG 图纸
+      </button>
+      <button class="export-btn watermark-btn" type="button" @click="EmitSendToWatermark">
+        加水印
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -498,6 +503,7 @@ export default defineComponent({
     'UpdateImageAlphaThreshold',
     'UpdateImageClarity',
     'ExportImage',
+    'SendToWatermark',
   ],
   data() {
     return {
@@ -945,6 +951,12 @@ export default defineComponent({
      */
     EmitExport() {
       this.$emit('ExportImage')
+    },
+    /**
+     * 派发送入加水印事件
+     */
+    EmitSendToWatermark() {
+      this.$emit('SendToWatermark')
     },
   },
 })
@@ -1402,8 +1414,14 @@ export default defineComponent({
   pointer-events: none;
 }
 
-.export-btn {
+.export-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 4px;
+}
+
+.export-btn {
   height: 46px;
   border: none;
   border-radius: 14px;
@@ -1416,9 +1434,18 @@ export default defineComponent({
   box-shadow: 0 10px 24px rgba(53, 95, 216, 0.28);
 }
 
+.watermark-btn {
+  background: linear-gradient(135deg, #2f5fad, #4d6d9a);
+  box-shadow: 0 10px 24px rgba(47, 95, 173, 0.22);
+}
+
 .export-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(53, 95, 216, 0.34);
+}
+
+.watermark-btn:hover {
+  box-shadow: 0 14px 28px rgba(47, 95, 173, 0.3);
 }
 
 .export-btn:active {

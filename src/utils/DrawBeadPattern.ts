@@ -220,6 +220,15 @@ function DrawPixelGrid(
 }
 
 /**
+ * 将 Canvas 转为 PNG dataURL
+ * @param canvas 目标画布
+ * @returns PNG dataURL
+ */
+export function GetCanvasPngDataUrl(canvas: HTMLCanvasElement): string {
+  return canvas.toDataURL('image/png')
+}
+
+/**
  * 将 Canvas 内容导出为 PNG 并触发下载
  * @param canvas 目标画布
  * @param fileName 下载文件名
@@ -227,6 +236,6 @@ function DrawPixelGrid(
 export function ExportCanvasAsPng(canvas: HTMLCanvasElement, fileName: string): void {
   const link = document.createElement('a')
   link.download = fileName
-  link.href = canvas.toDataURL('image/png')
+  link.href = GetCanvasPngDataUrl(canvas)
   link.click()
 }

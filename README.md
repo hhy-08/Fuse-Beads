@@ -266,6 +266,18 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（拼豆图纸加水印）
+
+- **会话目的**：拼豆图纸生成后可一键送入加水印工具。
+- **完成任务**：
+  - 拼豆生成器控制面板增加「加水印」，导出当前画布 PNG 后跳转水印页
+  - 像素画布增加「拼豆图纸加水印」
+  - 复用 `WatermarkHandoff`（window + sessionStorage）交接
+- **关键决策**：BeadCanvas 暴露 `GetExportDataUrl`；像素侧抽 `BuildProjectBeadDataUrl`
+- **修改文件**：
+  - 更新 `src/utils/DrawBeadPattern.ts`、`src/utils/PixelCanvas.ts`、`src/components/BeadCanvas.vue`、`src/components/ControlPanel.vue`
+  - 更新 `src/views/generator/index.vue`、`src/views/pixelEditor/index.vue`、`src/utils/ToolList.ts`、`README.md`
+
 ### 2026-07-24（修复加水印交接丢图）
 
 - **会话目的**：修复 Markdown 卡片点「加水印」跳转后图片未载入。

@@ -46,6 +46,7 @@
         @UpdateImageAlphaThreshold="HandleUpdateImageAlphaThreshold"
         @UpdateImageClarity="HandleUpdateImageClarity"
         @ExportImage="HandleExportImage"
+        @SendToWatermark="HandleSendToWatermark"
       />
 
       <BeadCanvas
@@ -82,11 +83,13 @@
  */
 import { defineComponent } from 'vue'
 import { mapGetters, mapMutations } from 'vuex'
+import router from '@/router'
 import ControlPanel from '@/components/ControlPanel.vue'
 import BeadCanvas from '@/components/BeadCanvas.vue'
 
 import type { CharStyle } from '@/utils/TextToPixels'
 import ToolPageHero from '@/components/ToolPageHero.vue'
+import { SetWatermarkHandoff } from '@/utils/WatermarkHandoff'
 
 export default defineComponent({
   name: 'GeneratorView',
@@ -331,6 +334,24 @@ export default defineComponent({
       if (canvasRef && typeof canvasRef.ExportImage === 'function') {
         canvasRef.ExportImage()
       }
+    },
+    /**
+     * 将当前拼豆图纸送入加水印工具
+     */
+    async HandleSendToWatermark() {
+      const canvasRef = this.$refs.beadCanvas as {
+        GetExportDataUrl?: () => { dataUrl: string; fileName: string } | null
+      }
+      const payload = canvasRef?.GetExportDataUrl?.()
+      if (!payload?.dataUrl) {
+        window.alert('请先生成拼豆图纸后再加水印')
+        return
+      }
+      SetWatermarkHandoff(payload)
+      await router.push({
+        path: '/watermark',
+        query: { from: 'generator' },
+      })
     },
   },
 })
