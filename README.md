@@ -20,7 +20,7 @@
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
-- JSON 格式化：校验 / 美化 / 压缩；支持普通 JSON 与后端 `JSON.stringify` 转义字符串；解析结果可树形展开 / 收起浏览
+- JSON 格式化：校验 / 美化 / 压缩；支持 stringify 转义字符串；树形展开收起；解析失败可「AI 修复」（本地智能纠错）
 - AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
@@ -231,6 +231,21 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（AI 修复按钮可点）
+
+- **会话目的**：解析失败时确保「AI 修复」可点击、更醒目。
+- **完成任务**：顶部工具栏与错误条均提供可点修复按钮；有输入即启用；增强截断 JSON 补全。
+- **修改文件**：`src/views/jsonFormatter/index.vue`、`src/utils/JsonFormatter.ts`、`README.md`
+
+### 2026-07-24（JSON AI 修复）
+
+- **会话目的**：解析失败时增加类似 FeHelper 的「AI 修复」能力。
+- **完成任务**：
+  - 新增本地智能纠错：松散转义、尾逗号、单引号、未引号键名、注释、JS/Python 字面量、截取片段等
+  - 解析结果区与错误状态栏增加「AI 修复」按钮，修复成功后写入输入并树形展示
+- **关键决策**：不依赖云端模型，纯本地启发式修复，保持工具箱离线可用；按钮文案对齐常见「AI 修复」习惯。
+- **修改文件**：`src/utils/JsonFormatter.ts`、`src/views/jsonFormatter/index.vue`、`README.md`
 
 ### 2026-07-24（JSON 页顶部样式对齐）
 

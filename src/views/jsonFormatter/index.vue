@@ -5,7 +5,7 @@
         <p class="brand">{{ appBrand }}</p>
         <h1>JSON 格式化</h1>
         <p class="subtitle">
-          校验、美化、压缩 JSON；支持普通对象与后端 JSON.stringify 后的转义字符串，解析结果可展开收起
+          校验、美化、压缩 JSON；支持 stringify 转义字符串与树形展开；解析失败可用 AI 修复
         </p>
       </div>
       <nav class="hero-nav">
@@ -49,12 +49,29 @@
           <button type="button" class="ghost" @click="HandleMinify">压缩</button>
           <button type="button" class="ghost" @click="HandleStringify">转义字符串</button>
           <button type="button" class="ghost" @click="HandleClear">清空</button>
+          <button
+            type="button"
+            class="repair-btn"
+            :disabled="!hasInputText || isRepairing"
+            @click="HandleRepair"
+          >
+            {{ isRepairing ? '修复中…' : 'AI 修复' }}
+          </button>
           <button type="button" class="primary" @click="HandleParse">解析 / 美化</button>
         </div>
       </section>
 
       <p v-if="statusText" class="status" :class="{ error: hasError, ok: !hasError }">
-        {{ statusText }}
+        <span class="status-text">{{ statusText }}</span>
+        <button
+          v-if="hasError && hasInputText"
+          type="button"
+          class="repair-btn"
+          :disabled="isRepairing"
+          @click="HandleRepair"
+        >
+          {{ isRepairing ? '修复中…' : 'AI 修复' }}
+        </button>
       </p>
 
       <section class="editors">
@@ -88,6 +105,16 @@
               <span>解析结果</span>
             </div>
             <div class="pane-actions">
+              <button
+                type="button"
+                class="repair-btn mini"
+                :class="{ pulse: hasError }"
+                :disabled="!hasInputText || isRepairing"
+                title="解析失败时智能修复常见错误"
+                @click="HandleRepair"
+              >
+                {{ isRepairing ? '修复中…' : 'AI 修复' }}
+              </button>
               <button
                 type="button"
                 class="chip mini"
@@ -184,6 +211,9 @@
             <code>"{\"name\":\"fuse\"}"</code>
           </li>
           <li>多层转义会自动逐层解包；右侧可树形展开 / 收起浏览</li>
+          <li>
+            解析失败时可点 <strong>AI 修复</strong>（本地智能纠错：松散转义、尾逗号、单引号、注释等）
+          </li>
         </ul>
       </section>
     </main>
@@ -205,6 +235,7 @@ import {
   MeasureTextBytes,
   MinifyJson,
   ParseJsonInput,
+  RepairJsonInput,
   StringifyJsonAsLiteral,
   ValidateJsonInput,
   type JsonIndentSize,
@@ -234,10 +265,18 @@ export default defineComponent({
       hasError: false,
       copyLabel: '复制',
       copyTimer: null as ReturnType<typeof setTimeout> | null,
+      isRepairing: false,
       fileAccept: JSON_FORMATTER_EXTENSIONS.map((ext) => `.${ext}`).join(','),
     }
   },
   computed: {
+    /**
+     * 输入区是否有内容（用于启用 AI 修复等）
+     * @returns 布尔
+     */
+    hasInputText(): boolean {
+      return Boolean(this.inputText && this.inputText.trim())
+    },
     /**
      * 输入区统计
      * @returns 行数与字符数
@@ -406,6 +445,34 @@ export default defineComponent({
           ? `解析完成（已解包 ${parsed.unwrapCount} 层 stringify）`
           : '解析完成'
       this.SetStatus(tip, false)
+    },
+    /**
+     * 本地智能纠错并重新解析（AI 修复）
+     */
+    HandleRepair() {
+      if (!this.hasInputText || this.isRepairing) {
+        return
+      }
+      this.isRepairing = true
+      try {
+        const result = RepairJsonInput(this.inputText)
+        if (!result.ok) {
+          this.SetStatus(result.message, true)
+          return
+        }
+        const pretty = JSON.stringify(result.data, null, this.indentSize)
+        this.inputText = pretty
+        this.fileName = ''
+        this.ApplyParsedResult(result.data, pretty, 'tree')
+        const fixText = result.fixes.join('、')
+        this.SetStatus(`AI 修复成功：${fixText}`, false)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : '修复过程出现异常'
+        this.SetStatus(`AI 修复失败：${message}`, true)
+      } finally {
+        this.isRepairing = false
+      }
     },
     /**
      * 压缩 JSON（文本视图）
@@ -739,6 +806,16 @@ export default defineComponent({
   border-radius: 10px;
   font-size: 0.9rem;
   line-height: 1.45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .status.ok {
@@ -751,6 +828,50 @@ export default defineComponent({
   background: rgba(159, 47, 47, 0.08);
   color: #9f2f2f;
   border: 1px solid rgba(159, 47, 47, 0.18);
+}
+
+.repair-btn {
+  border: none;
+  background: #3d6eb0;
+  color: #fff !important;
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.repair-btn.mini {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.repair-btn.pulse {
+  box-shadow: 0 0 0 2px rgba(61, 110, 176, 0.35);
+}
+
+.repair-btn:hover:not(:disabled) {
+  background: #2f5f9f;
+}
+
+.repair-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.status .repair-btn {
+  background: #c23b3b;
+}
+
+.status .repair-btn:hover:not(:disabled) {
+  background: #a82f2f;
 }
 
 .editors {

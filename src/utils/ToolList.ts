@@ -216,7 +216,7 @@ export function GetToolList(): ToolItem[] {
       id: 'json-formatter',
       name: 'JSON 格式化',
       description:
-        '校验、美化、压缩 JSON；支持普通对象与后端 JSON.stringify 转义字符串，解析结果可树形展开收起。',
+        '校验、美化、压缩 JSON；支持 stringify 转义与树形展开，解析失败可本地 AI 修复。',
       path: '/json-formatter',
       available: true,
       badge: '新',

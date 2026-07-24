@@ -520,3 +520,409 @@ export function FormatJsonPrimitive(value: unknown): string {
   }
   return JSON.stringify(value)
 }
+
+/** AI / 智能修复结果 */
+export type JsonRepairSuccess = {
+  ok: true
+  /** 修复后可直接解析的文本（美化前的规范化原文） */
+  repairedText: string
+  /** 解析后的数据 */
+  data: unknown
+  /** 应用过的修复步骤说明 */
+  fixes: string[]
+  unwrapCount: number
+}
+
+/** 修复失败 */
+export type JsonRepairFailure = {
+  ok: false
+  message: string
+}
+
+export type JsonRepairResult = JsonRepairSuccess | JsonRepairFailure
+
+/**
+ * 去掉行注释与块注释（不在字符串内的简单场景）
+ * @param text 文本
+ * @returns 去注释后文本
+ */
+export function StripJsonComments(text: string): string {
+  let result = ''
+  let index = 0
+  let inString = false
+  let stringQuote = ''
+  let escaped = false
+
+  while (index < text.length) {
+    const char = text[index]
+    const next = text[index + 1]
+
+    if (inString) {
+      result += char
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === stringQuote) {
+        inString = false
+        stringQuote = ''
+      }
+      index += 1
+      continue
+    }
+
+    if (char === '"' || char === "'") {
+      inString = true
+      stringQuote = char
+      result += char
+      index += 1
+      continue
+    }
+
+    if (char === '/' && next === '/') {
+      index += 2
+      while (index < text.length && text[index] !== '\n') {
+        index += 1
+      }
+      continue
+    }
+
+    if (char === '/' && next === '*') {
+      index += 2
+      while (index < text.length && !(text[index] === '*' && text[index + 1] === '/')) {
+        index += 1
+      }
+      index += 2
+      continue
+    }
+
+    result += char
+    index += 1
+  }
+
+  return result
+}
+
+/**
+ * 去掉对象 / 数组尾逗号
+ * @param text 文本
+ * @returns 处理后文本
+ */
+export function StripJsonTrailingCommas(text: string): string {
+  return text.replace(/,(\s*[}\]])/g, '$1')
+}
+
+/**
+ * 将松散转义片段 {\"a\":1} 还原为合法 JSON
+ * @param text 文本
+ * @returns 处理后文本
+ */
+export function UnescapeLooseJsonEscapes(text: string): string {
+  let current = text
+  // 连续多轮，处理 \\\" 等层层转义
+  for (let round = 0; round < 6; round += 1) {
+    if (!/\\["'\\nrtbf/]/.test(current) && !current.includes('\\\\')) {
+      break
+    }
+    const next = current
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\b/g, '\b')
+      .replace(/\\f/g, '\f')
+      .replace(/\\\//g, '/')
+      .replace(/\\\\/g, '\\')
+    if (next === current) {
+      break
+    }
+    current = next
+  }
+  return current
+}
+
+/**
+ * 单引号字符串改为双引号（简易场景）
+ * @param text 文本
+ * @returns 处理后文本
+ */
+export function ConvertJsonSingleQuotes(text: string): string {
+  return text.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_match, inner: string) => {
+    const escaped = inner.replace(/"/g, '\\"')
+    return `"${escaped}"`
+  })
+}
+
+/**
+ * 给未加引号的键名补双引号
+ * @param text 文本
+ * @returns 处理后文本
+ */
+export function QuoteJsonUnquotedKeys(text: string): string {
+  return text.replace(
+    /([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g,
+    '$1"$2"$3'
+  )
+}
+
+/**
+ * 将 JS / Python 字面量转为 JSON
+ * @param text 文本
+ * @returns 处理后文本
+ */
+export function NormalizeJsonLiterals(text: string): string {
+  return text
+    .replace(/\bundefined\b/g, 'null')
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bFalse\b/g, 'false')
+    .replace(/\bNaN\b/g, 'null')
+    .replace(/\bInfinity\b/g, 'null')
+    .replace(/-Infinity\b/g, 'null')
+}
+
+/**
+ * 从杂讯文本中截取最外层 {…} 或 […]
+ * @param text 文本
+ * @returns 截取结果；失败返回原文本
+ */
+export function ExtractJsonFragment(text: string): string {
+  const objectStart = text.indexOf('{')
+  const arrayStart = text.indexOf('[')
+  let start = -1
+  let open = ''
+  let close = ''
+
+  if (objectStart >= 0 && (arrayStart < 0 || objectStart < arrayStart)) {
+    start = objectStart
+    open = '{'
+    close = '}'
+  } else if (arrayStart >= 0) {
+    start = arrayStart
+    open = '['
+    close = ']'
+  } else {
+    return text
+  }
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+    if (char === '"') {
+      inString = true
+      continue
+    }
+    if (char === open) {
+      depth += 1
+    } else if (char === close) {
+      depth -= 1
+      if (depth === 0) {
+        return text.slice(start, index + 1)
+      }
+    }
+  }
+
+  return text.slice(start)
+}
+
+/**
+ * 尝试把「裸转义内容」包成 JSON 字符串再解析
+ * @param text 文本
+ * @returns 候选文本列表
+ */
+export function BuildQuotedJsonCandidates(text: string): string[] {
+  const candidates: string[] = []
+  if (!text.startsWith('"')) {
+    candidates.push(`"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`)
+    // 原文本身已含 \" 时，直接外层加引号
+    candidates.push(`"${text}"`)
+  }
+  return candidates
+}
+
+/**
+ * 补全被截断的 JSON：关闭未结束的字符串与括号
+ * @param text 可能不完整的 JSON 文本
+ * @returns 补全后的文本
+ */
+export function CloseTruncatedJson(text: string): string {
+  let inString = false
+  let escaped = false
+  const stack: string[] = []
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+    if (char === '"') {
+      inString = true
+      continue
+    }
+    if (char === '{') {
+      stack.push('}')
+    } else if (char === '[') {
+      stack.push(']')
+    } else if (char === '}' || char === ']') {
+      if (stack.length && stack[stack.length - 1] === char) {
+        stack.pop()
+      }
+    }
+  }
+
+  let result = text
+  if (escaped) {
+    result += ' '
+  }
+  if (inString) {
+    result += '"'
+  }
+
+  // 去掉收尾处可能多余的逗号 / 冒号后再补括号
+  result = result.replace(/[,:]\s*$/, '')
+  while (stack.length) {
+    result += stack.pop()
+  }
+  return result
+}
+
+/**
+ * 本地智能纠错：常见非法 JSON → 可解析 JSON（不依赖云端 AI）
+ * @param text 原始输入
+ * @returns 修复结果
+ */
+export function RepairJsonInput(text: string): JsonRepairResult {
+  const source = NormalizeJsonInput(text)
+  if (!source) {
+    return { ok: false, message: '请先输入需要修复的内容' }
+  }
+
+  const direct = ParseJsonInput(source)
+  if (direct.ok) {
+    return {
+      ok: true,
+      repairedText: JSON.stringify(direct.data),
+      data: direct.data,
+      fixes: ['原文已可解析，无需修复'],
+      unwrapCount: direct.unwrapCount,
+    }
+  }
+
+  type Step = { name: string; Apply: (input: string) => string }
+  const steps: Step[] = [
+    { name: '去除注释', Apply: StripJsonComments },
+    { name: '去除尾逗号', Apply: StripJsonTrailingCommas },
+    { name: '还原松散转义', Apply: UnescapeLooseJsonEscapes },
+    { name: '单引号转双引号', Apply: ConvertJsonSingleQuotes },
+    { name: '键名补引号', Apply: QuoteJsonUnquotedKeys },
+    { name: '规范化字面量', Apply: NormalizeJsonLiterals },
+    { name: '截取 JSON 片段', Apply: ExtractJsonFragment },
+    { name: '补全截断括号', Apply: CloseTruncatedJson },
+  ]
+
+  const tryParse = (
+    candidate: string,
+    fixes: string[]
+  ): JsonRepairSuccess | null => {
+    const parsed = ParseJsonInput(candidate)
+    if (!parsed.ok) {
+      return null
+    }
+    return {
+      ok: true,
+      repairedText: JSON.stringify(parsed.data),
+      data: parsed.data,
+      fixes: fixes.length ? fixes : ['自动规范化'],
+      unwrapCount: parsed.unwrapCount,
+    }
+  }
+
+  // 单步尝试
+  for (const step of steps) {
+    const next = step.Apply(source)
+    if (next === source) {
+      continue
+    }
+    const hit = tryParse(next, [step.name])
+    if (hit) {
+      return hit
+    }
+  }
+
+  // 按顺序叠加
+  let pipeline = source
+  const applied: string[] = []
+  for (const step of steps) {
+    const next = step.Apply(pipeline)
+    if (next !== pipeline) {
+      pipeline = next
+      applied.push(step.name)
+      const hit = tryParse(pipeline, [...applied])
+      if (hit) {
+        return hit
+      }
+    }
+  }
+
+  // 叠加后再强制补全截断
+  const closed = CloseTruncatedJson(pipeline)
+  if (closed !== pipeline) {
+    const hit = tryParse(closed, [...applied, '补全截断括号'])
+    if (hit) {
+      return hit
+    }
+  }
+
+  // 包成字符串再解析（应对裸 \"...\" 内容）
+  for (const quoted of BuildQuotedJsonCandidates(source)) {
+    const hit = tryParse(quoted, ['补全为 JSON 字符串并解包'])
+    if (hit) {
+      return hit
+    }
+  }
+  for (const quoted of BuildQuotedJsonCandidates(pipeline)) {
+    const hit = tryParse(quoted, [...applied, '补全为 JSON 字符串并解包'])
+    if (hit) {
+      return hit
+    }
+  }
+
+  // 先松散还原再包字符串
+  const loose = UnescapeLooseJsonEscapes(source)
+  if (loose !== source) {
+    const hit = tryParse(loose, ['还原松散转义'])
+    if (hit) {
+      return hit
+    }
+    const looseClosed = CloseTruncatedJson(loose)
+    const closedHit = tryParse(looseClosed, ['还原松散转义', '补全截断括号'])
+    if (closedHit) {
+      return closedHit
+    }
+  }
+
+  return {
+    ok: false,
+    message: '智能修复失败，请检查是否为残缺或严重损坏的 JSON',
+  }
+}
