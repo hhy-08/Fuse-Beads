@@ -266,6 +266,24 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（修复加水印交接丢图）
+
+- **会话目的**：修复 Markdown 卡片点「加水印」跳转后图片未载入。
+- **完成任务**：交接改为 `window` + `sessionStorage` 双通道；优化 dataURL→File；水印页显示载入状态。
+- **关键决策**：Vite 懒加载分包可能导致模块内变量不共享，不能只用闭包内存。
+- **修改文件**：更新 `src/utils/WatermarkHandoff.ts`、`src/views/watermark/index.vue`、`src/views/markdownCard/index.vue`、`README.md`
+
+### 2026-07-24（Markdown 卡片联动加水印）
+
+- **会话目的**：Markdown 卡片与加水印工具打通，生成图可一键送入加水印。
+- **完成任务**：
+  - 卡片页增加「加水印」按钮：导出当前卡片 → 内存交接 → 跳转 `/watermark`
+  - 水印页 `mounted` 消费交接数据并自动加入列表预览
+- **关键决策**：用 `WatermarkHandoff` 内存传递 dataURL，避免 sessionStorage 体积限制（SPA 内跳转有效）
+- **修改文件**：
+  - 新增 `src/utils/WatermarkHandoff.ts`
+  - 更新 `src/views/markdownCard/index.vue`、`src/views/watermark/index.vue`、`src/utils/ToolList.ts`、`README.md`
+
 ### 2026-07-24（Markdown 卡片拖拽上传强化）
 
 - **会话目的**：强化拖拽上传体验，使投放区更明显。

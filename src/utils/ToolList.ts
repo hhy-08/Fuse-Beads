@@ -236,7 +236,7 @@ export function GetToolList(): ToolItem[] {
       id: 'markdown-card',
       name: 'Markdown 卡片生成',
       description:
-        '粘贴 Markdown 渲染精美卡片样式，导出图片，适合社交平台分享代码、笔记。',
+        '粘贴或上传 Markdown 渲染精美卡片并导出图片，可一键送入加水印工具。',
       path: '/markdown-card',
       available: true,
       badge: '新',

@@ -134,7 +134,15 @@
               :disabled="isBusy || !hasContent"
               @click="HandleExport"
             >
-              {{ isBusy ? '导出中…' : downloadLabel }}
+              {{ isBusy ? '处理中…' : downloadLabel }}
+            </button>
+            <button
+              type="button"
+              class="ghost action-ghost"
+              :disabled="isBusy || !hasContent"
+              @click="HandleSendToWatermark"
+            >
+              加水印
             </button>
           </div>
 
@@ -178,6 +186,7 @@
  * 粘贴 Markdown → 主题预览 → 导出分享图片
  */
 import { defineComponent } from 'vue'
+import router from '@/router'
 
 import ToolPageHero from '@/components/ToolPageHero.vue'
 import {
@@ -196,6 +205,10 @@ import {
   type MarkdownCardExportFormat,
   type MarkdownCardThemeId,
 } from '@/utils/MarkdownCard'
+import {
+  BlobToDataUrl,
+  SetWatermarkHandoff,
+} from '@/utils/WatermarkHandoff'
 
 export default defineComponent({
   name: 'MarkdownCardView',
@@ -477,38 +490,70 @@ export default defineComponent({
       this.hasError = false
     },
     /**
-     * 导出卡片图片
+     * 生成当前卡片 Blob
+     * @returns 图片 Blob 与文件名
+     */
+    async BuildCardBlob(): Promise<{ blob: Blob; fileName: string }> {
+      const root = this.$refs.exportRoot as HTMLElement | undefined
+      if (!root) {
+        throw new Error('预览区域未就绪')
+      }
+      const blob = await ExportMarkdownCardBlob(
+        root,
+        this.exportFormat,
+        this.exportQuality / 100,
+        this.exportScale,
+      )
+      return {
+        blob,
+        fileName: ResolveMarkdownCardFilename(this.exportFormat),
+      }
+    },
+    /**
+     * 导出卡片图片并下载
      */
     async HandleExport() {
       if (!this.hasContent || this.isBusy) {
         return
       }
-      const root = this.$refs.exportRoot as HTMLElement | undefined
-      if (!root) {
-        this.hasError = true
-        this.statusText = '预览区域未就绪'
-        return
-      }
-
       this.isBusy = true
       this.hasError = false
       this.statusText = '正在生成图片…'
       try {
-        const blob = await ExportMarkdownCardBlob(
-          root,
-          this.exportFormat,
-          this.exportQuality / 100,
-          this.exportScale,
-        )
-        TriggerMarkdownCardDownload(
-          blob,
-          ResolveMarkdownCardFilename(this.exportFormat),
-        )
+        const { blob, fileName } = await this.BuildCardBlob()
+        TriggerMarkdownCardDownload(blob, fileName)
         this.statusText = `已导出 ${(blob.size / 1024).toFixed(1)} KB`
       } catch (error) {
         this.hasError = true
         this.statusText =
           error instanceof Error ? error.message : '导出失败，请重试'
+      } finally {
+        this.isBusy = false
+      }
+    },
+    /**
+     * 生成卡片并送入加水印工具
+     */
+    async HandleSendToWatermark() {
+      if (!this.hasContent || this.isBusy) {
+        return
+      }
+      this.isBusy = true
+      this.hasError = false
+      this.statusText = '正在生成并送入加水印…'
+      try {
+        const { blob, fileName } = await this.BuildCardBlob()
+        const dataUrl = await BlobToDataUrl(blob)
+        SetWatermarkHandoff({ dataUrl, fileName })
+        this.statusText = '已送入加水印工具'
+        await router.push({
+          path: '/watermark',
+          query: { from: 'markdown-card' },
+        })
+      } catch (error) {
+        this.hasError = true
+        this.statusText =
+          error instanceof Error ? error.message : '送入加水印失败'
       } finally {
         this.isBusy = false
       }
@@ -738,6 +783,7 @@ export default defineComponent({
 .actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .primary,
@@ -754,9 +800,20 @@ export default defineComponent({
   color: #fff8ef;
 }
 
-.primary:disabled {
+.primary:disabled,
+.action-ghost:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.action-ghost {
+  border: 1px solid rgba(29, 42, 68, 0.18);
+  background: #fff;
+  color: #1d2a44;
+}
+
+.action-ghost:hover:not(:disabled) {
+  background: rgba(29, 42, 68, 0.06);
 }
 
 .ghost.mini {

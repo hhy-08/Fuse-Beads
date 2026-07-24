@@ -3,6 +3,7 @@
     <ToolPageHero title="图片 / 文本水印" subtitle="图片与 txt / docx 等文本加水印，支持位置、平铺、旋转与自由拖动" />
 
     <main class="workspace">
+      <p v-if="handoffStatus" class="handoff-status">{{ handoffStatus }}</p>
       <ImageUploader :imageList="imageList" @ImagesAdded="HandleImagesAdded" />
 
       <ImageList
@@ -92,6 +93,10 @@ import ImageList from './components/ImageList.vue'
 import PreviewCanvas from './components/PreviewCanvas.vue'
 import WatermarkSettings from './components/WatermarkSettings.vue'
 import ToolPageHero from '@/components/ToolPageHero.vue'
+import {
+  BuildWatermarkItemFromDataUrl,
+  ConsumeWatermarkHandoff,
+} from '@/utils/WatermarkHandoff'
 import type {
   WatermarkImageItem,
   WatermarkPoint,
@@ -119,6 +124,7 @@ export default defineComponent({
       imageList: [] as WatermarkImageItem[],
       currentImageIndex: -1,
       isProcessing: false,
+      handoffStatus: '',
       watermarkText: '图片水印',
       textColor: '#000000',
       fontSize: 24,
@@ -178,12 +184,47 @@ export default defineComponent({
     },
   },
   /**
-   * 挂载时同步页面标题
+   * 挂载时同步页面标题，并接收其它工具送来的图片
    */
-  mounted() {
+  async mounted() {
     this.$store.commit('SETAPPTITLE', '图片水印工具')
+    await this.ConsumeIncomingHandoff()
   },
   methods: {
+    /**
+     * 消费 Markdown 卡片等工具送来的图片
+     */
+    async ConsumeIncomingHandoff() {
+      let payload = ConsumeWatermarkHandoff()
+      // 极端情况下 chunk 刚加载，稍后再读一次
+      if (!payload?.dataUrl) {
+        await new Promise((resolve) => window.setTimeout(resolve, 30))
+        payload = ConsumeWatermarkHandoff()
+      }
+      if (!payload?.dataUrl) {
+        return
+      }
+      this.handoffStatus = `正在载入 ${payload.fileName}…`
+      try {
+        const item = await BuildWatermarkItemFromDataUrl(
+          payload.dataUrl,
+          payload.fileName,
+        )
+        this.HandleImagesAdded([item])
+        this.handoffStatus = `已从其它工具载入：${payload.fileName}`
+        window.setTimeout(() => {
+          if (this.handoffStatus.startsWith('已从其它工具载入')) {
+            this.handoffStatus = ''
+          }
+        }, 3200)
+      } catch (error) {
+        console.error(error)
+        this.handoffStatus =
+          error instanceof Error
+            ? `载入失败：${error.message}`
+            : '载入交接图片失败'
+      }
+    },
     /**
      * 获取预览画布组件实例
      * @returns 画布暴露方法
@@ -449,6 +490,15 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.handoff-status {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(47, 95, 173, 0.1);
+  color: #1d2a44;
+  font-size: 0.9rem;
 }
 
 .batch-actions {
