@@ -185,6 +185,16 @@ export function GetToolList(): ToolItem[] {
       category: 'image',
     },
     {
+      id: 'image-base64',
+      name: '图片 ↔ Base64',
+      description:
+        '图片与 Base64 / Data URL 本地互转；超大图会提示并限制，避免超长字符串卡顿。',
+      path: '/image-base64',
+      available: true,
+      badge: '新',
+      category: 'image',
+    },
+    {
       id: 'pdf-tools',
       name: 'PDF 工具站',
       description:

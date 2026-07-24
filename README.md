@@ -19,6 +19,7 @@
 - 图纸尺寸计算：按宽高估算拼豆板规格与豆子总数，上传图纸统计各色用量
 - 二维码生成：文字/链接、前景/背景色、中心图标、纠错等级、PNG / JPEG / WebP 导出
 - 图片转 ICO：多尺寸图标（16~256），完整放入 / 铺满裁切 / 拉伸，本地下载或 ZIP
+- 图片 ↔ Base64：本地互转；提示体积约 +33%，超大图警告并限制（默认 ≤5MB）
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
 - JSON 格式化：校验 / 美化 / 压缩；支持 stringify 转义字符串；树形展开收起；解析失败可「AI 修复」（本地智能纠错）
 - 拾色器：屏幕取色，HEX / RGB / HSL / 透明度互转，自定义调色板本地保存
@@ -71,6 +72,7 @@ npm run dev
 | `/image-matting` | AI 智能抠图（本地去背景） |
 | `/watermark` | 图片水印工具 |
 | `/image-converter` | 图片格式转换 |
+| `/image-base64` | 图片 ↔ Base64 |
 | `/unit-converter` | 单位转换 |
 | `/color-picker` | 拾色器（色值转换） |
 | `/timestamp-converter` | 时间戳转换 |
@@ -237,6 +239,20 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（图片 ↔ Base64 互转）
+
+- **会话目的**：新增图片与 Base64 / Data URL 本地互转工具，并对超大图做提示与限制。
+- **完成任务**：
+  - 支持图片 → Base64（可选 Data URL 前缀）与 Base64 → 图片预览/下载
+  - 常驻提示：超大图不建议转 Base64、体积约 +33%、超长字符串易卡顿/复制崩溃
+  - 超过 1MB 警告，超过 5MB 拒绝转换；解码侧同步限制文本长度
+  - 注册路由 `/image-base64`，加入「图片类工具」
+- **关键决策**：
+  - 硬上限 5MB，避免超长字符串拖垮页面；压缩入口链到图片压缩工具
+- **修改文件**：
+  - 新增 `src/utils/ImageBase64.ts`、`src/views/imageBase64/index.vue`、`src/router/imageBase64/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`src/utils/Brand.ts`、`README.md`
 
 ### 2026-07-24（世界时钟各国时间）
 

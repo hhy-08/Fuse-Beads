@@ -11,7 +11,7 @@ export const APPNAME = 'Fuse 工具箱'
 
 /** 产品一句话简介 */
 export const APPDESCRIPTION =
-  '拼豆图纸、AI 抠图、图片处理、JSON / PDF、文本对比与单位换算等本地实用小工具'
+  '拼豆图纸、AI 抠图、图片处理、Base64 互转、JSON / PDF、文本对比与单位换算等本地实用小工具'
 
 /**
  * 获取带环境后缀的应用标题
