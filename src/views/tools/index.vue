@@ -90,17 +90,24 @@ export default defineComponent({
 <style scoped>
 .tools-page {
   min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(84, 148, 255, 0.1), transparent 55%),
+    linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
 }
 
 .hero {
   position: relative;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  padding: 48px 6vw 36px;
+  padding: 36px 6vw 28px;
   background:
     radial-gradient(circle at 18% 20%, rgba(255, 196, 92, 0.45), transparent 42%),
     radial-gradient(circle at 82% 10%, rgba(84, 148, 255, 0.35), transparent 40%),
@@ -174,14 +181,16 @@ export default defineComponent({
 
 .tools-main {
   flex: 1;
-  padding: 32px 6vw 56px;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px 20px 28px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 36px;
-  max-width: 1180px;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
+  gap: 28px;
+  overflow: auto;
 }
 
 .tool-group {
@@ -238,7 +247,7 @@ export default defineComponent({
   border: 1px solid rgba(49, 65, 95, 0.12);
   border-radius: 18px;
   padding: 22px 22px 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   color: #1f2a3d;
   cursor: pointer;
@@ -327,10 +336,20 @@ export default defineComponent({
 }
 
 @media (max-width: 700px) {
+  .tools-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
   .hero {
     flex-direction: column;
     align-items: flex-start;
     padding-top: 36px;
+  }
+
+  .tools-main {
+    overflow: visible;
   }
 
   .group-header {

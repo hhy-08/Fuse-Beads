@@ -49,7 +49,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'office',
       name: '文本 / 日常办公小工具',
-      description: 'PDF 工具站、文件转换、二维码等办公与日常效率工具。',
+      description: 'PDF 工具站、JSON 格式化、文本对比、文件转换、二维码等办公效率工具。',
     },
     {
       id: 'life',

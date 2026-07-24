@@ -1,6 +1,6 @@
 # Fuse Kit · Fuse 工具箱
 
-基于 **Vue 3 + Vite** 的本地实用小工具集合（Options API）。提供拼豆图纸、图片压缩、水印、格式转换、单位换算等能力。
+基于 **Vue 3 + Vite** 的本地实用小工具集合（Options API）。提供拼豆图纸、AI 抠图、图片处理、JSON / PDF、文本对比、单位换算等能力。
 
 ## 功能
 
@@ -231,6 +231,18 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（工具首页简介文案）
+
+- **会话目的**：首页副标题文案对齐当前工具能力。
+- **完成任务**：更新 `APPDESCRIPTION` 与办公分类描述，覆盖拼豆、AI 抠图、JSON / PDF 等。
+- **修改文件**：`src/utils/Brand.ts`、`src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-24（工具列表页铺满视口）
+
+- **会话目的**：工具列表页与 JSON 页一致，默认铺满顶部下方剩余视口。
+- **完成任务**：保留 hero；列表区全宽 + 内部滚动，占满剩余高度。
+- **修改文件**：`src/views/tools/index.vue`、`README.md`
 
 ### 2026-07-24（JSON 工作区默认铺满）
 
