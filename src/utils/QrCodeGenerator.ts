@@ -1,9 +1,10 @@
 /**
  * 二维码生成工具模块
- * 基于 qrcode 库，支持自定义颜色、中心图标与多格式导出
+ * 基于 qrcode 生成、jsQR 解码，支持自定义颜色、嵌入图标与多格式导出
  */
 
 import QRCode from 'qrcode'
+import jsQR from 'jsqr'
 
 /** 纠错等级 */
 export type QrErrorLevel = 'L' | 'M' | 'Q' | 'H'
@@ -307,4 +308,86 @@ export function ResolveQrFilename(
     .slice(0, 24)
   const extension = ResolveQrFormatOption(format).extension
   return `qrcode-${preview || 'export'}-${stamp}.${extension}`
+}
+
+/** 支持解码的图片类型提示 */
+export const QRDECODEACCEPT =
+  'image/png,image/jpeg,image/webp,image/gif,image/bmp,.png,.jpg,.jpeg,.webp,.gif,.bmp'
+
+/**
+ * 将图片绘制到 canvas 并取出 ImageData
+ * @param image 图片元素
+ * @returns ImageData
+ */
+function ImageToImageData(image: HTMLImageElement): ImageData {
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+  if (!width || !height) {
+    throw new Error('图片尺寸无效')
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) {
+    throw new Error('Canvas 不可用')
+  }
+  ctx.drawImage(image, 0, 0, width, height)
+  return ctx.getImageData(0, 0, width, height)
+}
+
+/**
+ * 从 ImageData 解码二维码内容
+ * @param imageData 像素数据
+ * @returns 解码文本
+ */
+export function DecodeQrFromImageData(imageData: ImageData): string {
+  const result = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'attemptBoth',
+  })
+  if (!result?.data) {
+    throw new Error('未识别到二维码，请换更清晰的图片重试')
+  }
+  return result.data
+}
+
+/**
+ * 从 HTMLImageElement 解码二维码
+ * @param image 图片
+ * @returns 解码文本
+ */
+export function DecodeQrFromImageElement(image: HTMLImageElement): string {
+  return DecodeQrFromImageData(ImageToImageData(image))
+}
+
+/**
+ * 从图片 File 解码二维码
+ * @param file 图片文件
+ * @returns 解码文本
+ */
+export async function DecodeQrFromImageFile(file: File): Promise<string> {
+  if (!file.type.startsWith('image/') && !/\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) {
+    throw new Error('请上传 PNG / JPG / WebP 等图片文件')
+  }
+  const image = await LoadImageFromFile(file)
+  return DecodeQrFromImageElement(image)
+}
+
+/**
+ * 从剪贴板图片项解码二维码
+ * @param item 剪贴板图片项
+ * @returns 解码文本
+ */
+export async function DecodeQrFromClipboardItem(
+  item: ClipboardItem,
+): Promise<string> {
+  const imageType = item.types.find((type) => type.startsWith('image/'))
+  if (!imageType) {
+    throw new Error('剪贴板中没有图片')
+  }
+  const blob = await item.getType(imageType)
+  const file = new File([blob], `clipboard.${imageType.split('/')[1] || 'png'}`, {
+    type: imageType,
+  })
+  return DecodeQrFromImageFile(file)
 }

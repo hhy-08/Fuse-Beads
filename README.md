@@ -266,6 +266,31 @@ npx wrangler pages deploy dist --project-name=fuse-beads
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
 
+### 2026-07-24（二维码 tabs 与内容间距）
+
+- **会话目的**：收紧 `mode-tabs` 与下方解码/生成面板的垂直间隔。
+- **完成任务**：`workspace` 改为纵向 flex（tabs 与 `workspace-body` 间距 10px）；双栏网格下移到 `workspace-body`。
+- **关键决策**：tabs 与内容分容器，避免原先整表 `gap` 把行距拉大。
+- **修改文件**：更新 `src/views/qrCode/index.vue`、`README.md`
+
+### 2026-07-24（二维码解码布局收紧）
+
+- **会话目的**：修复解码页左右两栏间隔过大。
+- **完成任务**：解码模式收窄容器与预览列宽度，减小 gap 与预览区最小高度。
+- **关键决策**：生成模式保持原宽；仅 `is-decode` 时使用紧凑双栏。
+- **修改文件**：更新 `src/views/qrCode/index.vue`、`README.md`
+
+### 2026-07-24（二维码解码）
+
+- **会话目的**：在二维码页增加解码功能。
+- **完成任务**：
+  - 页面增加「生成 / 解码」切换；解码支持上传、拖拽、剪贴板图片
+  - 基于 `jsqr` 识别内容，可复制结果或一键填入生成端
+- **关键决策**：生成仍用 `qrcode`，解码用轻量 `jsqr`，同页双模式避免拆路由
+- **修改文件**：
+  - 更新 `src/utils/QrCodeGenerator.ts`、`src/views/qrCode/index.vue`、`src/router/qrCode/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`package.json`、`README.md`
+
 ### 2026-07-24（拼豆图纸加水印）
 
 - **会话目的**：拼豆图纸生成后可一键送入加水印工具。

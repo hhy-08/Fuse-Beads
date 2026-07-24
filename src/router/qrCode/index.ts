@@ -10,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     path: '/qrcode',
     name: 'QrCode',
     component: QrCode,
-    meta: { title: '二维码生成' },
+    meta: { title: '二维码工具' },
   },
 ]
 

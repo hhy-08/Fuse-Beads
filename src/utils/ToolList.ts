@@ -244,11 +244,12 @@ export function GetToolList(): ToolItem[] {
     },
     {
       id: 'qrcode',
-      name: '二维码生成',
-      description: '输入文字或链接生成二维码，支持自定义颜色、嵌入小图标与 PNG / JPEG / WebP 导出。',
+      name: '二维码工具',
+      description:
+        '生成可自定义颜色与图标的二维码，或上传图片解码识别内容，支持 PNG / JPEG / WebP 导出。',
       path: '/qrcode',
       available: true,
-      badge: '可用',
+      badge: '新',
       category: 'office',
     },
     {
