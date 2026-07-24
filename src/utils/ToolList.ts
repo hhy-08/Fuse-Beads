@@ -54,7 +54,7 @@ export function GetToolCategories(): ToolCategory[] {
     {
       id: 'life',
       name: '趣味 & 生活实用工具',
-      description: '单位换算、拾色器等轻量实用小工具，随用随开。',
+      description: '单位换算、拾色器、时间戳转换等轻量实用小工具，随用随开。',
     },
   ]
 }
@@ -245,6 +245,16 @@ export function GetToolList(): ToolItem[] {
       name: '拾色器（色值转换）',
       description: '屏幕取色，HEX / RGB / HSL / 透明度互相转换，支持自定义调色。',
       path: '/color-picker',
+      available: true,
+      badge: '新',
+      category: 'life',
+    },
+    {
+      id: 'timestamp-converter',
+      name: '时间戳转换',
+      description:
+        '秒 / 毫秒时间戳与北京时间互相转换，支持非洲等多时区、批量转换与复制记录。',
+      path: '/timestamp-converter',
       available: true,
       badge: '新',
       category: 'life',

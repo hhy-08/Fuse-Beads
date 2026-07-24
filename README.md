@@ -22,6 +22,7 @@
 - 文本对比：双栏粘贴或上传 txt / json / vue 等，行级 + 字符级差异高亮
 - JSON 格式化：校验 / 美化 / 压缩；支持 stringify 转义字符串；树形展开收起；解析失败可「AI 修复」（本地智能纠错）
 - 拾色器：屏幕取色，HEX / RGB / HSL / 透明度互转，自定义调色板本地保存
+- 时间戳转换：秒 / 毫秒与多时区本地时间互转（含非洲多国），支持批量转换与复制记录
 - AI 智能抠图：默认轻量 u2netp（~5MB）；海报/高清/人像等大模型选中后按需下载并缓存，导出透明 PNG
 
 ## 技术栈
@@ -71,6 +72,7 @@ npm run dev
 | `/image-converter` | 图片格式转换 |
 | `/unit-converter` | 单位转换 |
 | `/color-picker` | 拾色器（色值转换） |
+| `/timestamp-converter` | 时间戳转换 |
 | `/file-converter` | 文件转换（纯前端） |
 | `/pdf-tools` | PDF 工具站（卡片入口） |
 | `/pdf-tools/:toolId` | 单个 PDF 工具工作区 |
@@ -233,6 +235,24 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - 改 Dockerfile / Worker 代码后仍需本地 `npm run deploy`（镜像要重新 build）
 
 ## 会话总结
+
+### 2026-07-24（时间戳时区扩充非洲等）
+
+- **会话目的**：扩充时间戳转换可选国家，重点补齐非洲时区。
+- **完成任务**：新增尼日利亚、加纳、肯尼亚等非洲多国，并按时区大洲分组下拉。
+- **修改文件**：`src/utils/TimestampConverter.ts`、`src/views/timestampConverter/index.vue`、`src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-24（时间戳转换工具）
+
+- **会话目的**：新增时间戳转换工具，支持多时区与批量转换。
+- **完成任务**：
+  - 秒 / 毫秒 ↔ 日期时间互转，默认北京时间，可选日韩欧美等时区
+  - 支持批量转换、转换记录与一键复制
+  - 注册路由 `/timestamp-converter`，加入「趣味生活」分类
+- **关键决策**：用 `Intl` + 墙钟校正实现时区解析，避免额外时区库依赖。
+- **修改文件**：
+  - 新增 `src/utils/TimestampConverter.ts`、`src/views/timestampConverter/index.vue`、`src/router/timestampConverter/index.ts`
+  - 更新 `src/utils/ToolList.ts`、`README.md`
 
 ### 2026-07-24（拾色器取消工作区全屏）
 
