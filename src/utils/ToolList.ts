@@ -37,11 +37,6 @@ export type ToolGroup = {
 export function GetToolCategories(): ToolCategory[] {
   return [
     {
-      id: 'beads',
-      name: '拼豆配套工具',
-      description: '图纸生成、像素绘制与素材预处理，服务拼豆创作全流程。',
-    },
-    {
       id: 'image',
       name: '图片类工具',
       description: '裁剪、拼接、压缩、水印、AI 抠图、SVG 转图片、格式转换等常见图片处理。',
@@ -55,6 +50,11 @@ export function GetToolCategories(): ToolCategory[] {
       id: 'life',
       name: '趣味 & 生活实用工具',
       description: '单位换算、拾色器、时间戳转换、世界时钟等轻量实用小工具，随用随开。',
+    },
+    {
+      id: 'beads',
+      name: '拼豆配套工具',
+      description: '图纸生成、像素绘制与素材预处理，服务拼豆创作全流程。',
     },
   ]
 }

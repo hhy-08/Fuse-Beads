@@ -1424,3 +1424,11 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - **修改文件**：
   - 更新 `.env.prod`、`.env.test`、`README.md`
   - 新增 `public/_redirects`
+
+### 2026-07-27（工具列表排序调整）
+
+- **会话目的**：将工具箱首页的「拼豆配套工具」分类移动到最下方展示。
+- **完成任务**：调整 `GetToolCategories()` 中分类顺序，使拼豆相关工具区块排在图片类、办公类、生活类之后。
+- **关键决策**：排序逻辑集中在 `ToolList.ts`，`tools/index.vue` 仍通过 `GetGroupedToolList()` 渲染，无需改动页面组件。
+- **修改文件**：
+  - 更新 `src/utils/ToolList.ts`、`README.md`
