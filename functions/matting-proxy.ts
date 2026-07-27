@@ -45,7 +45,7 @@ export const onRequest: PagesFunction = async (context) => {
     try {
       const upstream = await fetch(mirror, {
         redirect: 'follow',
-        headers: { 'User-Agent': 'fuse-kit-matting-proxy' },
+        headers: { 'User-Agent': 'utility-toolbox-matting-proxy' },
       })
       if (!upstream.ok || !upstream.body) {
         throw new Error(`HTTP ${upstream.status}`)

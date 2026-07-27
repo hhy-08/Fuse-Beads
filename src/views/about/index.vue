@@ -2,7 +2,7 @@
   <div class="about-page">
     <header class="about-hero">
       <p class="brand">{{ appBrand }}</p>
-      <h1>关于 Fuse 工具箱</h1>
+      <h1>关于 {{ appName }}</h1>
       <nav class="nav">
         <router-link to="/">工具列表</router-link>
         <router-link to="/generator">拼豆工具</router-link>
@@ -11,7 +11,7 @@
 
     <section class="about-content">
       <p>
-        Fuse 工具箱（Fuse Kit）是一套基于 Vue 3 + Vite 的本地实用小工具集合，
+        {{ appName }}（{{ appBrand }}）是一套基于 Vue 3 + Vite 的本地实用小工具集合，
         可在浏览器内完成常见处理，无需上传服务器。
       </p>
       <p>工程结构参考 ilot-h5，接入 Vue Router 与 Vuex（含 session 持久化）。</p>
@@ -40,6 +40,7 @@ export default defineComponent({
   data() {
     return {
       appBrand: APPBRAND,
+      appName: APPNAME,
     }
   },
   /**

@@ -3,15 +3,18 @@
  * 统一各页面展示名称，避免文案分散不一致
  */
 
-/** 英文品牌名（页头展示） */
-export const APPBRAND = 'Fuse Kit'
+/** 品牌名（页头展示） */
+export const APPBRAND = 'Toolbox'
 
 /** 中文产品名（文档标题 / 环境默认标题） */
-export const APPNAME = 'Fuse 工具箱'
+export const APPNAME = '实用工具箱'
+
+/** npm / 技术标识（User-Agent、脚本等） */
+export const APPSLUG = 'utility-toolbox'
 
 /** 产品一句话简介 */
 export const APPDESCRIPTION =
-  '拼豆图纸、AI 抠图、图片处理、Markdown 卡片、JSON / PDF、文本对比与单位换算等本地实用小工具'
+  '图片、文本、办公与趣味类本地小工具集合：压缩、水印、抠图、JSON / PDF、单位换算等，浏览器内完成、不上传服务器'
 
 /**
  * 获取带环境后缀的应用标题

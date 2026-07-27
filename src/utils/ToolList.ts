@@ -177,9 +177,9 @@ export function GetToolList(): ToolItem[] {
     },
     {
       id: 'svg-to-image',
-      name: 'SVG 转图片',
+      name: 'SVG / 图片互转',
       description:
-        'SVG 转 PNG / JPG / WEBP，可自定义输出尺寸，支持拖放与 URL 导入。',
+        'SVG 转 PNG / JPG / WEBP；图片转 SVG 可选 Potrace / ImageTracer / 嵌入保真，预览支持缩放。',
       path: '/svg-to-image',
       available: true,
       badge: '新',

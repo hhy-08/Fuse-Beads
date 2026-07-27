@@ -5,6 +5,7 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import html2canvas from 'html2canvas'
+import { APPBRAND } from '@/utils/Brand'
 
 /** 卡片主题 ID */
 export type MarkdownCardThemeId = 'ink' | 'night' | 'ocean' | 'forest'
@@ -156,7 +157,7 @@ function Hello(name: string) {
 
 > 粘贴内容 → 选主题 → 导出图片
 
-**Fuse Kit** · 本地处理，不上传服务器
+**${APPBRAND}** · 本地处理，不上传服务器
 `
 
 /**

@@ -10,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     path: '/svg-to-image',
     name: 'SvgToImage',
     component: SvgToImage,
-    meta: { title: 'SVG 转图片' },
+    meta: { title: 'SVG / 图片互转' },
   },
 ]
 

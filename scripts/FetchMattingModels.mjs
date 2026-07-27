@@ -90,7 +90,7 @@ async function DownloadModel(item, force = false) {
       )
       const response = await fetch(url, {
         redirect: 'follow',
-        headers: { 'User-Agent': 'fuse-kit-matting-fetch' },
+        headers: { 'User-Agent': 'utility-toolbox-matting-fetch' },
       })
       if (!response.ok || !response.body) {
         throw new Error(`HTTP ${response.status}`)

@@ -1,6 +1,13 @@
-# Fuse Kit · Fuse 工具箱
+# Toolbox · 实用工具箱
 
-基于 **Vue 3 + Vite** 的本地实用小工具集合（Options API）。提供拼豆图纸、AI 抠图、图片处理、JSON / PDF、文本对比、单位换算等能力。
+基于 **Vue 3 + Vite** 的本地实用小工具集合（Options API）。提供图片处理、文本办公、趣味生活等多类浏览器端工具，无需上传服务器。
+
+### 2026-07-27（项目命名调整）
+
+- **会话目的**：将项目名称改为更贴合「各类小工具集合」定位（非拼豆专用）。
+- **完成任务**：品牌统一为 **Toolbox** / **实用工具箱**；npm 包名 `utility-toolbox`。
+- **关键决策**：拼豆仅为工具之一；保留 Cloudflare 项目名 `fuse-beads` 与本地 storage key，避免部署与已存数据中断。
+- **修改文件**：`src/utils/Brand.ts`、`package.json`、`.env.*`、`public/index.html`、`README.md` 等用户可见文案。
 
 ## 功能
 
@@ -60,7 +67,7 @@ npm run dev
 | `npm run preview` | 预览构建产物 |
 
 环境变量文件：`.env.dev` / `.env.test` / `.env.prod`  
-主要字段：`VITE_ENV`、`VITE_API_BASE_URL`、`VITE_APP_TITLE`（默认 Fuse 工具箱）、`VITE_BASE_ROUTE`
+主要字段：`VITE_ENV`、`VITE_API_BASE_URL`、`VITE_APP_TITLE`（默认 实用工具箱）、`VITE_BASE_ROUTE`
 
 ## 路由
 
@@ -212,7 +219,7 @@ npm run deploy
 3. **Settings → Environment variables**（Production）增加：  
    - `VITE_API_BASE_URL` = `https://fuse-pdf-api.<subdomain>.workers.dev`  
    - `VITE_ENV` = `prod`  
-   - `VITE_APP_TITLE` = `Fuse 工具箱`  
+   - `VITE_APP_TITLE` = `实用工具箱`  
    - `VITE_BASE_ROUTE` = `/`  
 4. 保存后 **Retry deployment** / 推送代码触发重新构建  
 
@@ -265,6 +272,42 @@ npx wrangler pages deploy dist --project-name=fuse-beads
 - **修改文件**：
   - 新增 `src/components/ToolPageHero.vue`
   - 更新 `src/views/**/index.vue`（除 about）、`README.md`
+
+### 2026-07-24（接入 Potrace + 预览缩放）
+
+- **会话目的**：增加 Potrace 可选引擎，并为预览加放大功能。
+- **完成任务**：
+  - 接入 `esm-potrace-wasm`（浏览器 Potrace），默认推荐
+  - 保留 ImageTracer 与嵌入保真，用户可切换
+  - 双侧预览支持 +/−/重置与滚轮缩放（50%–400%）
+- **关键决策**：不用 Node 版 `potrace`+Jimp（体积大且不适配 Vite）；用同算法的 WASM 构建。
+- **修改文件**：`src/utils/ImageToSvg.ts`、`src/views/svgToImage/index.vue`、`src/utils/ToolList.ts`、`package.json`、`README.md`
+
+### 2026-07-24（矢量描摹边缘平滑）
+
+- **会话目的**：修复图片转 SVG 后圆/斜边呈折线、不圆滑的问题。
+- **完成任务**：默认改用平滑曲线参数；关闭直角增强；小图先放大再描摹。
+- **关键决策**：锯齿主因是 imagetracer 默认 `ltres/qtres` 过大与小图采样不足，非预览 CSS。
+- **修改文件**：`src/utils/ImageToSvg.ts`、`src/views/svgToImage/index.vue`、`README.md`
+
+### 2026-07-24（图片转 SVG 默认矢量轮廓）
+
+- **会话目的**：图片 → SVG 优先输出矢量轮廓路径。
+- **完成任务**：默认转换方式改为 `trace`；选项顺序与文案突出矢量轮廓。
+- **关键决策**：嵌入保真仍可选，但不再作为默认。
+- **修改文件**：`src/views/svgToImage/index.vue`、`src/utils/ToolList.ts`、`README.md`
+
+### 2026-07-24（图片转 SVG）
+
+- **会话目的**：在 SVG 工具页增加 PNG 等图片转 SVG。
+- **完成任务**：
+  - 增加「SVG → 图片 / 图片 → SVG」切换
+  - 图片→SVG 支持嵌入保真与 imagetracerjs 矢量描摹（预设 + 颜色数）
+  - 可复制 / 下载 SVG
+- **关键决策**：嵌入适合图标保真；描摹适合色块 Logo，照片效果有限并限制长边 1024
+- **修改文件**：
+  - 新增 `src/utils/ImageToSvg.ts`、`src/types/imagetracerjs.d.ts`
+  - 更新 `src/views/svgToImage/index.vue`、`src/router/svgToImage/index.ts`、`src/utils/ToolList.ts`、`package.json`、`README.md`
 
 ### 2026-07-24（SVG 转图片）
 

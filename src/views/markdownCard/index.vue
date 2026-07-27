@@ -124,7 +124,7 @@
 
           <label class="check">
             <input v-model="showFooter" type="checkbox" />
-            <span>显示底部 Fuse Kit 水印</span>
+            <span>显示底部 {{ appBrand }} 水印</span>
           </label>
 
           <div class="actions">
@@ -170,7 +170,7 @@
                 v-html="renderedHtml"
               />
               <footer v-if="showFooter" class="md-footer" :style="footerStyle">
-                Fuse Kit · Markdown 卡片
+                {{ appBrand }} · Markdown 卡片
               </footer>
             </article>
           </div>
@@ -189,6 +189,7 @@ import { defineComponent } from 'vue'
 import router from '@/router'
 
 import ToolPageHero from '@/components/ToolPageHero.vue'
+import { APPBRAND } from '@/utils/Brand'
 import {
   DEFAULTMARKDOWN,
   ExportMarkdownCardBlob,
@@ -217,6 +218,7 @@ export default defineComponent({
   },
   data() {
     return {
+      appBrand: APPBRAND,
       markdownText: DEFAULTMARKDOWN,
       themes: GetMarkdownCardThemes(),
       widths: GetMarkdownCardWidths(),
